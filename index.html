@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <style type="text/css">
+    #text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 10%;
+      z-index: 100;
+      display: block;
+      text-align: center;
+      font-size: 6vw;
+      font-family: monospace, monospace;
+      color: #0000ff;
+      text-shadow: 1px 1px #afafff;
+
+    }
+    #blinker{
+      animation: blinker 1s linear infinite;
+    }
+    @keyframes blinker{
+      50%{
+        opacity: 0;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "../js/three.module.js"
+      }
+    }
+  </script>
+  
+  <script type="module" src="../js/GLTFLoader.js"></script>
+  
+</head>
+<body>
+  <div class="world" id="world"></div>
+
+
+  <script type="module" src="../js/crowd.js"></script>
+
+</body>
+</html>
