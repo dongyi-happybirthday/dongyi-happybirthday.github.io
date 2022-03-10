@@ -564,7 +564,7 @@ function getRandomInteger(min, max) {
 
 function createBalloons(){
   let pos = people[0].position.clone();
-  for(let i = 0; i < 20; i++){
+  for(let i = 0; i < 10; i++){
     let m = new THREE.MeshPhongMaterial({color: Math.random() * 0xaf62ff,shininess: 10});
     let g = new THREE.SphereGeometry(0.5);
     let b = new THREE.Mesh(g, m);
@@ -572,6 +572,7 @@ function createBalloons(){
     b.position.x=pos.x+Math.random()*8 - 4;
     b.position.y=pos.y-(Math.random()*10 - 5);
     b.position.z=pos.z-(Math.random()*4 -2);
+    b.userData = {speed: Math.random() * (0.06 - 0.01) + 0.01};
     balloons.push(b);
     scene.add(b);
   }
@@ -738,7 +739,7 @@ function animate(){
       songMixer.update(delta);
       balloons.forEach((b)=>{
         if(b.position.y > 10){b.position.y = -5;}
-        else{b.position.y+=0.05;}
+        else{b.position.y+=b.userData.speed;}
       });
     }
   }
