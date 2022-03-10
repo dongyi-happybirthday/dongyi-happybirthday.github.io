@@ -4,18 +4,18 @@ import { GLTFLoader } from '../js/GLTFLoader.js';
 
 // THREEJS RELATED VARIABLES
 
-let scene, camera, //cameraOrtho, sceneOrtho, disposables = []
+let scene, camera, // disposables = []
 textureLoader, gltf, itemsToLoad = 0,
 renderer, clock, people, 
-distToTarget = 0, zoomCount = 3, spinSpeed = 0.03, flySpeed = 0, 
+distToTarget = 0, zoomCount = 2, spinSpeed = 0.03, flySpeed = 0, 
 horizon = -56, health, raycaster, targetBox, earth, group, cameraGroup, 
 greeting = false, songMixer, heart, beatingHeart = false, lastBeat = false,
 camStart, camStop, camLookat, camDuration = 0, camElapsed = 0, panningCamera = false,
-camQStart, camQStop, canPlaySong = false, playingSong = false;
+camQStart, camQStop, canPlaySong = false, playingSong = false, runTime = 0, balloons = [],
 
 //SCREEN & MOUSE VARIABLES
 
-let HEIGHT, WIDTH, mousePos, 
+HEIGHT, WIDTH, mousePos, 
 mouseDown = false, 
 //personFound = false, 
 slowmo = false,
@@ -82,37 +82,7 @@ function createScene() {
   // HUD
   textureLoader = new THREE.TextureLoader();
   health = new Array(5);
-  // textureLoader.load('bar_20.png', (texture) => {addHealthBar(0, texture, true);});
-  // textureLoader.load('bar_40.png', (texture) => {addHealthBar(1, texture, false);});
-  // textureLoader.load('bar_60.png', (texture) => {addHealthBar(2, texture, false);});
-  // textureLoader.load('bar_80.png', (texture) => {addHealthBar(3, texture, false);});
-  // textureLoader.load('bar_100.png', (texture) => {addHealthBar(4, texture, false);});
   
-  // // CREDITS
-  // textureLoader.load('text.png', (texture) => {
-  //   const material = new THREE.SpriteMaterial({map: texture});
-  //   const sprite = new THREE.Sprite(material);
-  //   sprite.center.set(0.5, 0.5);
-  //   sprite.position.set(0, 0, -1);
-  //   const scale = 0.001;
-  //   sprite.scale.set(
-  //     scale * material.map.image.width, 
-  //     scale * material.map.image.height, 1);
-  //   // sprite.material.opacity = Math.sin(0.01 + sprite.position.x * 0.01);
-  //   camera.add( sprite );
-  // });
-  
-          
-  // updateHUDSprites();
-  // let left = -4,
-  // right = 4,
-  // top = 3,
-  // bottom = -1,
-  // near = 0.01,
-  // far = 1000;
-  // camera = new THREE.OrthographicCamera(left,right,top,bottom,near,far);
-  // camera.position.set(0, 0, 8);
-  // camera.lookAt(0, 0, 0);
 
   // raycaster = new THREE.Raycaster();
   // raycaster.layers.set( 1 );
@@ -157,14 +127,6 @@ function handleWindowResize() {
   camera.aspect = WIDTH / HEIGHT;
   camera.updateProjectionMatrix();
   renderer.setSize(WIDTH, HEIGHT);
-
-  // cameraOrtho.left = - WIDTH / 2;
-  // cameraOrtho.right = WIDTH / 2;
-  // cameraOrtho.top = HEIGHT / 2;
-  // cameraOrtho.bottom = - HEIGHT / 2;
-  // cameraOrtho.updateProjectionMatrix();
-
-  // updateHUDSprites();
 }
 
 function loadStage_0(){
@@ -175,10 +137,6 @@ function loadStage_0(){
 
   itemsToLoad++;
   textureLoader.load('texture/bar_20.png', (texture) => {addHealthBar(0, texture, true); itemsToLoad--;});
-  // textureLoader.load('bar_40.png', (texture) => {addHealthBar(1, texture, false);});
-  // textureLoader.load('bar_60.png', (texture) => {addHealthBar(2, texture, false);});
-  // textureLoader.load('bar_80.png', (texture) => {addHealthBar(3, texture, false);});
-  // textureLoader.load('bar_100.png', (texture) => {addHealthBar(4, texture, false);});
 
   let atmosphere;
   gltf.scene.traverse((node)=>{
@@ -189,26 +147,11 @@ function loadStage_0(){
     }
   });
 
-  // earth.position.set(0, 0, -20);
-  // atmosphere.position.set(0, 0, -20);
-  // const scale = 0.5;
-  // earth.scale.set(scale, scale, scale);
-
   group.add(atmosphere);
   group.add(earth);
 
-  // camera.position.set(0, 0, zoomDistance * zoomCount);
   camera.position.set(0, 0, 100);
 
-
-  // targetBox = new THREE.Mesh(
-  //   new THREE.BoxGeometry(2, 2, 3), 
-  //   // new THREE.MeshBasicMaterial({color: 0x06eeee,transparent:true,opacity:0.5}));
-  //   new THREE.MeshBasicMaterial({transparent:true, opacity:0}));
-  // targetBox.layers.set( 1 );
-  // atmosphere.add( targetBox );
-
-  
   stage = 0;
   animate();
 }
@@ -249,33 +192,8 @@ function loadStage_1() {
       case 'face18': faces.push(node); break;
       case 'hat': hat = node; break;
       case 'ground': ground = node; break;
-      // case 'atmosphere': atmosphere = node; break;
     }
   });
-
-  // scene.add(atmosphere);
-  // scene.add(earth);
-
-  // const groundGeo = new THREE.PlaneGeometry( 150, 100 );
-  // const groundMat = new THREE.MeshBasicMaterial( {color: 0x565656, side: THREE.DoubleSide} );
-  // const ground = new THREE.Mesh(groundGeo, groundMat);
-  // ground.rotation.x = Math.PI / -2;
-
-  // const wallSize = 4, wallHalf = wallSize/2, wallX = 74 + wallHalf;
-  // const wallGeo = new THREE.BoxGeometry(wallSize,100,wallSize);
-  // const wallMat = new THREE.MeshBasicMaterial( {color: 0x033300} );
-  // const wall_r = new THREE.Mesh(wallGeo, wallMat);
-  // const wall_l = wall_r.clone();
-  // const wall_rr = wall_r.clone();
-  // const wall_ll = wall_r.clone();
-  // wall_r.position.set(wallX, 0, wallHalf);
-  // ground.add(wall_r);
-  // wall_l.position.set(-wallX, 0, wallHalf);
-  // ground.add(wall_l);
-  // wall_rr.position.set(wallX+wallSize, 0, wallHalf+wallSize);
-  // ground.add(wall_rr);
-  // wall_ll.position.set(-wallX-wallSize, 0, wallHalf+wallSize);
-  // ground.add(wall_ll);
 
   ground.position.set(0,-1,-10);
   group.add(ground);
@@ -411,24 +329,6 @@ function loadStage_1() {
 
     person.userData = {mixer:mixer, action:action, speed:speed};
     people[i] = person;
-    // scene.add( person );
-
-    // itemsToLoad++;
-    // textureLoader.load('texture/heart.png', (texture) => {
-    //   const material = new THREE.SpriteMaterial({map:texture, sizeAttenuation:false, fog:false});
-    //   const sprite = new THREE.Sprite(material);
-    //   sprite.center.set(0.5, 0.5);
-    //   sprite.position.set(0, 0.2, 0.5);
-    //   const scale = 0.00001;
-    //   sprite.scale.set(
-    //     scale * material.map.image.width, 
-    //     scale * material.map.image.height, 1);
-    //   // sprite.material.opacity = 0.2;
-    //   // sprite.material.rotation = 3;
-    //   person.add( sprite );
-    //   itemsToLoad--;
-    // });
-    //
   }
 
   itemsToLoad -= nPeople;
@@ -484,7 +384,6 @@ function loadStage_2(){
   camStop.z += 4;
   let camSpeed = 12;
   camDuration = camStart.distanceTo(camStop) / camSpeed;
-  // console.log(camStart.distanceTo(camStop));
   camElapsed = 0;
   camQStart = camera.quaternion.clone();
   camera.lookAt(camLookat);
@@ -504,58 +403,6 @@ function loadStage_2(){
     .setEffectiveWeight( 1 )
     .fadeIn( duration )
     .play();
-  // mixer.stopAllAction();
-  // person.userData.action = mixer.clipAction(clipIdle);
-  // action.play();
-
-  // // CREDITS
-  // const text = document.getElementById('text');
-  // const blinker = '<span id="blinker">\u25ae</span>', newline = '<br>';
-  // const lines = ['In a sea of people','my eyes will always','search for you'];
-  // let line = 0;
-  // let typePosition = 0;
-  // let msg = '';
-  // function typewriter(){
-  //   let str = lines[line];
-  //   if(typePosition == str.length - 1){
-  //     if(line == 2){
-  //       msg += str.substr(typePosition, 1);
-  //       text.innerHTML = msg + blinker;
-  //     }
-  //     else{
-  //       msg += str.substr(typePosition, 1) + newline;
-  //       text.innerHTML = msg + blinker;
-  //       line++;
-  //       typePosition = 0;
-  //       setTimeout(typewriter, 1000);
-  //     }
-  //   }
-  //   else{
-  //     msg += str.substr(typePosition, 1);
-  //     text.innerHTML = msg + blinker;
-  //     typePosition++;
-  //     setTimeout(typewriter, 150);
-  //   }
-  // }
-  // typewriter();
-  
-  // itemsToLoad++;
-  // textureLoader.load('texture/text.png', (texture) => {
-  //   const material = new THREE.SpriteMaterial({map:texture, sizeAttenuation:false, fog:false});
-  //   const sprite = new THREE.Sprite(material);
-  //   sprite.center.set(0.5, 0.5);
-  //   sprite.position.set(0, 0, -1);
-  //   const scale = 0.001;
-  //   sprite.scale.set(
-  //     scale * material.map.image.width, 
-  //     scale * material.map.image.height, 1);
-  //   sprite.material.opacity = 0.2;
-  //   // sprite.material.rotation = 3;
-  //   camera.add( sprite );
-  //   itemsToLoad--;
-  // });
-
-  
 
   stage = 2;
 }
@@ -566,14 +413,12 @@ function playSong(){
     const name = node.name;
     switch(name){
       case 'song': song = node; break;
-      // case 'name01': name01 = node; break;
     }
   });
   camera.add(song);
   // let scale = 0.07;
   song.scale.set(0.07,0.07,0.07);
   song.position.set(0, -0.7, -1);
-  // const clipSong = THREE.AnimationClip.findByName(gltf.animations, 'song');
   songMixer = new THREE.AnimationMixer(song);
   const actionSong = songMixer.clipAction(
     THREE.AnimationClip.findByName(gltf.animations, 'song'));
@@ -591,12 +436,14 @@ function showText(){
   let line = 0;
   let typePosition = 0;
   let msg = '';
+  container.innerHTML = blinker;
   function typewriter(){
     let str = lines[line];
     if(typePosition == str.length - 1){
       if(line == 2){
         msg += str.substr(typePosition, 1);
         container.innerHTML = msg + blinker;
+        setTimeout(()=>{container.style.opacity = '0.2';}, 1000);
       }
       else{
         msg += str.substr(typePosition, 1) + newline;
@@ -613,7 +460,7 @@ function showText(){
       setTimeout(typewriter, 150);
     }
   }
-  typewriter();
+  setTimeout(typewriter, 1000);
   container.addEventListener('mouseup', handleMouseUp, false);
 }
 
@@ -644,19 +491,11 @@ function handleMouseDown(event){
     case 0:
       if(distToTarget > 0){ return; }
       switch(zoomCount){
-        case 3: distToTarget = 80; zoomCount--; break;
-        case 2: distToTarget = 15; zoomCount--; break;
+        case 2: distToTarget = 96.2; zoomCount--; break;
         case 1: distToTarget = 3; zoomCount--; break;
       }
       flySpeed = distToTarget / 50;
       spinSpeed -= 0.01;
-      
-      // targetBox.raycast(raycaster, intersects);
-      // if(intersects.length > 0){
-      //   targetBox.removeFromParent();
-      //   loadStage_1();
-      //   return;
-      // }
       break;
     case 1:
       targetBox.raycast(raycaster, intersects);
@@ -690,6 +529,7 @@ function handleMouseUp(event){
       if(canPlaySong && !playingSong){
         document.getElementById('text').remove();
         playSong();
+        createBalloons();
       } 
       break;
   }
@@ -707,30 +547,42 @@ function handleMouseMove(event) {
       let lr = mousePos.x - tx;
       // let ud = mousePos.y - ty;
 
-      // camera.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), lr);
       camera.position.x += lr * 30;
       let bound = 72;
       if(camera.position.x < -bound){camera.position.x = -bound;}
       else if(camera.position.x > bound){camera.position.x = bound;}
       mousePos.x = tx;
       // mousePos.y = ty;
-      // mousePos = {x:tx, y:ty};
-      // console.log(mousePos.x, mousePos.y);
-      
       break;
     case 2:break;
   }
-  
 }
 
 function getRandomInteger(min, max) {
   return Math.floor(Math.random() * (max - min) ) + min;
 }
 
+function createBalloons(){
+  let pos = people[0].position.clone();
+  for(let i = 0; i < 20; i++){
+    let m = new THREE.MeshPhongMaterial({color: Math.random() * 0xaf62ff,shininess: 10});
+    let g = new THREE.SphereGeometry(0.5);
+    let b = new THREE.Mesh(g, m);
+
+    b.position.x=pos.x+Math.random()*8 - 4;
+    b.position.y=pos.y-(Math.random()*10 - 5);
+    b.position.z=pos.z-(Math.random()*4 -2);
+    balloons.push(b);
+    scene.add(b);
+  }
+}
+
 function animate(){
   let delta = clock.getDelta();
+  runTime += delta;
   if(stage == 0){
     if(itemsToLoad == 0){ //loadStage_1(); ///////////////////////
+      health[0].material.opacity= (Math.sin(runTime*5) + 1) * (1 - 0) / 2 + 0;
       earth.rotateY(spinSpeed);
       if(distToTarget > 0){
         //fly to earth
@@ -751,7 +603,10 @@ function animate(){
       else if(dist >= 0){bar = 4;}
       // console.log(bar);
       for(let i = 0; i < 5; i++){
-        if(bar == i){health[i].visible = true;}
+        
+        if(bar == i){
+          health[i].visible = true;
+          health[i].material.opacity= (Math.sin(runTime*(i+5)) + 1) * 0.5;}
         else{health[i].visible = false;}
       }
       
@@ -771,8 +626,6 @@ function animate(){
   }
   else if(stage == 2){
     const person = people[0];
-    // const pos = person.position.clone();
-    // pos.y += 1.5;
 
     // heart
     if(itemsToLoad == 0){
@@ -805,7 +658,6 @@ function animate(){
             beatingHeart = false;
             canPlaySong = true;
           }
-          
         }
         else{
           alpha = hd.elapsed / hd.duration;
@@ -865,17 +717,12 @@ function animate(){
           camera.lookAt(camLookat);
         }
       }
-      
-      
     }
-
-    
     
     // salute
     if(greeting){
       person.userData.mixer.update(delta);
       if(group.children.length > 0){group.children.pop();}
-      
     }
     else{
       const dist = camera.position.distanceTo(camLookat);
@@ -884,12 +731,16 @@ function animate(){
         camera.remove(cameraGroup);
       }
     }
-    
     // scene.remove(group);
 
     // song
-    if(playingSong){songMixer.update(delta);}
-
+    if(playingSong){
+      songMixer.update(delta);
+      balloons.forEach((b)=>{
+        if(b.position.y > 10){b.position.y = -5;}
+        else{b.position.y+=0.05;}
+      });
+    }
   }
   else { return; }
 
@@ -897,7 +748,6 @@ function animate(){
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
-
 
 function lerp(a, b, x){
   return a + (b - a) * x;
@@ -913,9 +763,6 @@ function easeInOutBack(x){
 
 function init(event){
   createScene();
-  //loadModel();
-  //stage = 1;
-  //loop();
 }
 
 window.addEventListener('load', init, false);
