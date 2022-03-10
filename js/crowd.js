@@ -491,11 +491,10 @@ function handleMouseDown(event){
     case 0:
       if(distToTarget > 0){ return; }
       switch(zoomCount){
-        case 2: distToTarget = 96.2; zoomCount--; break;
-        case 1: distToTarget = 3; zoomCount--; break;
+        case 2: distToTarget = 96.2; spinSpeed -= 0.02; zoomCount--; break;
+        case 1: distToTarget = 3.2; spinSpeed -= 0.01; zoomCount--; break;
       }
       flySpeed = distToTarget / 50;
-      spinSpeed -= 0.01;
       break;
     case 1:
       targetBox.raycast(raycaster, intersects);
@@ -563,15 +562,15 @@ function getRandomInteger(min, max) {
 }
 
 function createBalloons(){
-  let pos = people[0].position.clone();
+  const pos = people[0].position;
   for(let i = 0; i < 10; i++){
     let m = new THREE.MeshPhongMaterial({color: Math.random() * 0xaf62ff,shininess: 10});
     let g = new THREE.SphereGeometry(0.5);
     let b = new THREE.Mesh(g, m);
-
-    b.position.x=pos.x+Math.random()*8 - 4;
-    b.position.y=pos.y-(Math.random()*10 - 5);
-    b.position.z=pos.z-(Math.random()*4 -2);
+    b.position.set(
+      pos.x + Math.random()*8 - 4,
+      pos.y + Math.random()*10 - 13,
+      pos.z + Math.random()*4 - 2);
     b.userData = {speed: Math.random() * (0.06 - 0.01) + 0.01};
     balloons.push(b);
     scene.add(b);
@@ -737,8 +736,12 @@ function animate(){
     // song
     if(playingSong){
       songMixer.update(delta);
+      const pos = person.position;
       balloons.forEach((b)=>{
-        if(b.position.y > 10){b.position.y = -5;}
+        if(b.position.y > 7){
+          b.position.set(pos.x+ Math.random()*8 - 4, -3, pos.z+ Math.random()*4 - 2);
+          b.userData.speed = Math.random() * (0.06 - 0.01) + 0.01;
+        }
         else{b.position.y+=b.userData.speed;}
       });
     }
