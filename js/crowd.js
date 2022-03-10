@@ -7,7 +7,7 @@ import { GLTFLoader } from '../js/GLTFLoader.js';
 let scene, camera, // disposables = []
 textureLoader, gltf, itemsToLoad = 0,
 renderer, clock, people, 
-distToTarget = 0, zoomCount = 2, spinSpeed = 0.03, flySpeed = 0, 
+step = 0, zoomCount = 0, spinSpeed = 0.03, 
 horizon = -56, health, raycaster, targetBox, earth, group, cameraGroup, 
 greeting = false, songMixer, heart, beatingHeart = false, lastBeat = false,
 camStart, camStop, camLookat, camDuration = 0, camElapsed = 0, panningCamera = false,
@@ -390,7 +390,6 @@ function loadStage_2(){
   camQStop = camera.quaternion.clone();
   camera.quaternion.copy(camQStart);
   
-  
   const clips = gltf.animations;
   const clipIdle = THREE.AnimationClip.findByName(clips, 'idle');
   const mixer = person.userData.mixer;
@@ -489,12 +488,8 @@ function handleMouseDown(event){
   const intersects = [];
   switch(stage){
     case 0:
-      if(distToTarget > 0){ return; }
-      switch(zoomCount){
-        case 2: distToTarget = 96.2; spinSpeed -= 0.02; zoomCount--; break;
-        case 1: distToTarget = 3.2; spinSpeed -= 0.01; zoomCount--; break;
-      }
-      flySpeed = distToTarget / 50;
+      if(step > 0){ return; }
+      step = 1;
       break;
     case 1:
       targetBox.raycast(raycaster, intersects);
@@ -568,9 +563,9 @@ function createBalloons(){
     let g = new THREE.SphereGeometry(0.5);
     let b = new THREE.Mesh(g, m);
     b.position.set(
-      pos.x + Math.random()*8 - 4,
-      pos.y + Math.random()*10 - 13,
-      pos.z + Math.random()*4 - 2);
+      pos.x + Math.random()*8-4,
+      Math.random()*10 - 13,
+      pos.z + (Math.random() < 0.5 ? Math.random()+1 : Math.random()-2));
     b.userData = {speed: Math.random() * (0.06 - 0.01) + 0.01};
     balloons.push(b);
     scene.add(b);
@@ -582,14 +577,27 @@ function animate(){
   runTime += delta;
   if(stage == 0){
     if(itemsToLoad == 0){ //loadStage_1(); ///////////////////////
-      health[0].material.opacity= (Math.sin(runTime*5) + 1) * (1 - 0) / 2 + 0;
+      health[0].material.opacity= (Math.sin(runTime*5) + 1) * 0.5;
       earth.rotateY(spinSpeed);
-      if(distToTarget > 0){
-        //fly to earth
-        camera.translateZ(-flySpeed);
-        distToTarget -= flySpeed;
+      if(step > 0){
+        if(step <= 50){
+          if(zoomCount==0){
+            let camZ = lerp(100, 3.2, easeOutCubic(step/50));
+            // let camZ = lerp(100, 3.2, step/50);
+            let s = 2*Math.PI / -96.8;
+            let t = s * (camZ - 100);
+            let camX = Math.sin(t) * 10;
+            camera.position.set(camX, 0, camZ);
+          }
+          else{
+            //second click
+            camera.position.z = lerp(3.2, 0.5, step/50);
+          }
+          step++;
+        }
+        else if(zoomCount == 1){ loadStage_1(); }
+        else{step = 0; zoomCount++; spinSpeed = 0.01;}
       }
-      else if(zoomCount == 0){ loadStage_1(); }
     }
   }
   else if(stage == 1){
@@ -634,14 +642,18 @@ function animate(){
         hd.elapsed += delta;
         
         if(lastBeat){
-          
           if(hd.elapsed < 1.6){
-            heart.position.lerpVectors(hd.origin, hd.near, hd.elapsed / 1.6);
+            alpha = hd.elapsed / 1.6;
+            heart.position.lerpVectors(hd.origin, hd.near, easeOutBack(alpha));
+            camera.position.y = lerp(camStart.y, camStop.y, alpha);
+            camera.lookAt(camLookat);
           }
           else if(hd.elapsed < 3){
             if(hd.beats == 0){
               hd.beats = 1;
               heart.position.copy(hd.near);
+              camera.position.y = camStop.y;
+              camera.lookAt(camLookat);
             }
           }
           else if(hd.elapsed < 15){
@@ -683,7 +695,7 @@ function animate(){
                 camera.quaternion.slerpQuaternions(camQStart, camQStop, 0.5);
                 break;
               case 1: 
-                camera.quaternion.slerpQuaternions(camQStart, camQStop, 1);
+                camera.quaternion.copy(camQStop);
                 panningCamera = true;
                 break;
             }
@@ -697,9 +709,10 @@ function animate(){
         // move camera
         if(panningCamera){
           camElapsed += delta;
-          let aa = camElapsed / camDuration;
-          if(aa >= 1) {
-            aa = 1;
+          let alpha = camElapsed / camDuration;
+          if(alpha >= 1) {
+            alpha = 1;
+            camStart.copy(camera.position);
             panningCamera = false;
             lastBeat = true;
             hd.beats = 0;
@@ -711,9 +724,11 @@ function animate(){
             hd.near.copy(camStop);
             hd.near.z -= 0.15;
           }
-          else if(aa > 0.66) {hd.duration = 0.2;}
-          else if(aa > 0.33) {hd.duration = 0.3;}
-          camera.position.lerpVectors(camStart, camStop, aa);
+          else if(alpha > 0.66) {hd.duration = 0.2;}
+          else if(alpha > 0.33) {hd.duration = 0.3;}
+
+          camera.position.lerpVectors(camStart, camStop, easeInOutBack(alpha));
+          camera.position.y += Math.sin(camElapsed * 14) * 0.5;
           camera.lookAt(camLookat);
         }
       }
@@ -739,7 +754,10 @@ function animate(){
       const pos = person.position;
       balloons.forEach((b)=>{
         if(b.position.y > 7){
-          b.position.set(pos.x+ Math.random()*8 - 4, -3, pos.z+ Math.random()*4 - 2);
+          b.position.set(
+            pos.x + Math.random()*8-4,
+            -3,
+            pos.z + (Math.random() < 0.5 ? Math.random()+1 : Math.random()-2));
           b.userData.speed = Math.random() * (0.06 - 0.01) + 0.01;
         }
         else{b.position.y+=b.userData.speed;}
@@ -758,11 +776,18 @@ function lerp(a, b, x){
 }
 
 function easeInOutBack(x){
-  const c1 = 1.70158;
-  const c2 = c1 * 1.525;
+  const c2 = 1.525;
   return (x < 0.5
     ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2
     : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2);
+}
+
+function easeOutCubic(x){
+  return 1 - Math.pow(1 - x, 3);
+}
+
+function easeOutBack(x) {
+  return 1 + Math.pow(x - 1, 3) ;
 }
 
 function init(event){
