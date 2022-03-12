@@ -583,7 +583,7 @@ function handleTouchMove(ev) {
       let diff1 = Math.abs(tpCache[point1].clientX - ev.targetTouches[0].clientX);
       let diff2 = Math.abs(tpCache[point2].clientX - ev.targetTouches[1].clientX);
 
-      if (Math.abs(diff1-diff2) < ev.target.clientWidth / 10){
+      if (Math.abs(diff1-diff2) < ev.target.clientWidth / 1){
         let lr;
         if(diff1 > diff2){
           lr = (tpCache[point1].clientX - ev.targetTouches[0].clientX) * 2/WIDTH;
@@ -592,7 +592,7 @@ function handleTouchMove(ev) {
           lr = (tpCache[point2].clientX - ev.targetTouches[1].clientX) * 2/WIDTH;
         }
 
-        camera.position.x += lr * 30;
+        camera.position.x += lr * 5;
         let bound = 72;
         if(camera.position.x < -bound){camera.position.x = -bound;}
         else if(camera.position.x > bound){camera.position.x = bound;}
