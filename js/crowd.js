@@ -114,9 +114,9 @@ function createScene() {
   container.appendChild(renderer.domElement);
 
   mousePos = new THREE.Vector2();
-  container.addEventListener('mousedown', handleMouseDown, false);
-  container.addEventListener('mouseup', handleMouseUp, false);
-  container.addEventListener('mousemove', handleMouseMove, false);
+  container.addEventListener('mousedown', handleMouseDown, true);
+  container.addEventListener('mouseup', handleMouseUp, true);
+  container.addEventListener('mousemove', handleMouseMove, true);
   window.addEventListener('resize', handleWindowResize, false);
 }
 
@@ -460,7 +460,7 @@ function showText(){
     }
   }
   setTimeout(typewriter, 1000);
-  container.addEventListener('mouseup', handleMouseUp, false);
+  container.addEventListener('mouseup', handleMouseUp, true);
 }
 
 function addHealthBar(index, texture, visible){
@@ -481,7 +481,8 @@ function addHealthBar(index, texture, visible){
 
 // HANDLE MOUSE EVENTS
 function handleMouseDown(event){
-  if(itemsToLoad != 0){ return; }
+  event.preventDefault();
+  if(mouseDown || itemsToLoad != 0){ return; }
   mousePos.x = (event.clientX / WIDTH) * 2 - 1;
   mousePos.y = -(event.clientY / HEIGHT) * 2 + 1;
   raycaster.setFromCamera( mousePos, camera );
@@ -510,6 +511,7 @@ function handleMouseDown(event){
 }
 
 function handleMouseUp(event){
+  event.preventDefault();
   if(itemsToLoad != 0){ return; }
   switch(stage){
     case 0:break;
@@ -531,6 +533,7 @@ function handleMouseUp(event){
 }
 
 function handleMouseMove(event) {
+  event.preventDefault();
   if(!mouseDown) { return; }
   switch(stage){
     case 0:break;
