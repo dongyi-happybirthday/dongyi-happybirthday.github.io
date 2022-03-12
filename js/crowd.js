@@ -19,7 +19,8 @@ HEIGHT, WIDTH, mousePos,
 mouseDown = false, 
 //personFound = false, 
 slowmo = false,
-stage = -1;
+stage = -1,
+tpCache = [];
 
 //INIT THREE JS, SCREEN AND MOUSE EVENTS
 
@@ -118,6 +119,10 @@ function createScene() {
   container.addEventListener('mouseup', handleMouseUp, true);
   container.addEventListener('mousemove', handleMouseMove, true);
   window.addEventListener('resize', handleWindowResize, false);
+
+  container.addEventListener("touchstart", handleTouchStart, false);
+  container.addEventListener("touchmove", handleTouchMove, false);
+  container.addEventListener("touchend", handleTouchEnd, false);
 }
 
 // HANDLE SCREEN EVENTS
@@ -339,7 +344,6 @@ function loadStage_1() {
   targetBox.layers.set( 1 );
   people[0].add( targetBox );
   targetBox.position.set(0,1,0);
-  
 
   stage = 1;
 }
@@ -552,6 +556,64 @@ function handleMouseMove(event) {
       // mousePos.y = ty;
       break;
     case 2:break;
+  }
+}
+
+function handleTouchStart(ev) {
+  if (stage==1 && ev.targetTouches.length == 2) {
+    ev.preventDefault();
+    tpCache = [ev.targetTouches[0], ev.targetTouches[1]];
+    people.forEach((person)=>{
+      person.userData.action.timeScale = 0.04 * person.userData.speed;
+    });
+    slowmo = true;
+  }
+}
+
+function handleTouchMove(ev) {
+  if(stage == 1 && ev.touches.length == 2 && ev.targetTouches.length == 2 && ev.changedTouches.length == 2) {
+    ev.preventDefault();
+    let point1=-1, point2=-1;
+    for (let i=0; i < tpCache.length; i++) {
+      if (tpCache[i].identifier == ev.targetTouches[0].identifier) point1 = i;
+      if (tpCache[i].identifier == ev.targetTouches[1].identifier) point2 = i;
+    }
+    if (point1 >=0 && point2 >= 0) {
+      // Calculate the difference between the start and move coordinates
+      let diff1 = Math.abs(tpCache[point1].clientX - ev.targetTouches[0].clientX);
+      let diff2 = Math.abs(tpCache[point2].clientX - ev.targetTouches[1].clientX);
+
+      if (Math.abs(diff1-diff2) < ev.target.clientWidth / 10){
+        let lr;
+        if(diff1 > diff2){
+          lr = (tpCache[point1].clientX - ev.targetTouches[0].clientX) * 2/WIDTH;
+        }
+        else{
+          lr = (tpCache[point2].clientX - ev.targetTouches[1].clientX) * 2/WIDTH;
+        }
+
+        camera.position.x += lr * 30;
+        let bound = 72;
+        if(camera.position.x < -bound){camera.position.x = -bound;}
+        else if(camera.position.x > bound){camera.position.x = bound;}
+        
+        tpCache[point1].clientX = ev.targetTouches[0].clientX;
+        tpCache[point2].clientX = ev.targetTouches[1].clientX;
+      }
+    }
+  }
+}
+
+function handleTouchEnd(ev) {
+  if (stage==1 && tpCache.length!=0) {
+    ev.preventDefault();
+    if(ev.targetTouches.length == 0){
+      tpCache = [];
+      people.forEach((person)=>{
+        person.userData.action.timeScale = person.userData.speed;
+      });
+      slowmo = false;
+    }
   }
 }
 
