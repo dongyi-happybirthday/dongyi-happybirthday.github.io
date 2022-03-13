@@ -17,7 +17,6 @@ camQStart, camQStop, canPlaySong = false, playingSong = false, runTime = 0, ball
 
 HEIGHT, WIDTH, mousePos, 
 mouseDown = false, 
-//personFound = false, 
 slowmo = false,
 stage = -1,
 tpCache = [];
@@ -30,29 +29,11 @@ function createScene() {
   WIDTH = window.innerWidth;
 
   scene = new THREE.Scene();
-  // const color = 'lightblue';
-  // scene.background = new THREE.Color(color);
-  // scene.fog = new THREE.FogExp2(color, 0.04);
-  // scene.fog = new THREE.Fog(color, 50,55);
-
-  // sceneOrtho = new THREE.Scene();
 
   // LIGHTS
-  let hemisphereLight = new THREE.HemisphereLight(); //(0xaaaaaa,0x000000, 1)
+  let hemisphereLight = new THREE.HemisphereLight();
   let directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-  // directionalLight.position.set(1, 1, 1).normalize();
-  // directionalLight.castShadow = true;
-  // directionalLight.shadow.camera.left = -400;
-  // directionalLight.shadow.camera.right = 400;
-  // directionalLight.shadow.camera.top = 400;
-  // directionalLight.shadow.camera.bottom = -400;
-  // directionalLight.shadow.camera.near = 1;
-  // directionalLight.shadow.camera.far = 1000;
-  // directionalLight.shadow.mapSize.width = 2048;
-  // directionalLight.shadow.mapSize.height = 2048;
 
-  // hemisphereLight.layers.enable( 1 );
-  // directionalLight.layers.enable( 1 );
   scene.add(hemisphereLight);
   scene.add(directionalLight);
 
@@ -62,32 +43,17 @@ function createScene() {
   let nearPlane = 0.1;
   let farPlane = 1000;
   camera = new THREE.PerspectiveCamera(fieldOfView, aspectRatio, nearPlane, farPlane);
-  // camera.position.set(0, 6, 0);
-  // camera.lookAt(0, 0, -20);
-  // camera.layers.enable( 1 );
   camera.layers.enable( 1 );
   scene.add(camera);
 
   raycaster = new THREE.Raycaster();
   raycaster.layers.set( 1 );
 
-  // let left = - WIDTH / 2,
-  // right = WIDTH / 2,
-  // top = HEIGHT / 2,
-  // bottom = - HEIGHT / 2,
-  // near = 1,
-  // far = 10;
-  // cameraOrtho = new THREE.OrthographicCamera(left,right,top,bottom,near,far);
-  // cameraOrtho.position.z = 10;
-
   // HUD
   textureLoader = new THREE.TextureLoader();
   health = new Array(5);
   
-
-  // raycaster = new THREE.Raycaster();
-  // raycaster.layers.set( 1 );
-  const gltfLoader = new GLTFLoader(); //.setPath( 'models/' );
+  const gltfLoader = new GLTFLoader();
   gltfLoader.load( 'models/model.glb', 
     function ( results ) {
       gltf = results;
@@ -109,7 +75,6 @@ function createScene() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize(WIDTH, HEIGHT);
-  // renderer.shadowMap.enabled = true;
   renderer.outputEncoding = THREE.sRGBEncoding;
   let container = document.getElementById('world');
   container.appendChild(renderer.domElement);
@@ -182,7 +147,7 @@ function loadStage_1() {
   camera.lookAt(0, 0, -20);
 
 
-  let model, name01, name02, face01, faces = [], hat, ground; //earth, atmosphere;
+  let model, name01, name02, face01, faces = [], hat, ground; 
   gltf.scene.traverse((node)=>{
     const name = node.name;
     switch(name){
@@ -202,7 +167,6 @@ function loadStage_1() {
 
   ground.position.set(0,-1,-10);
   group.add(ground);
-
   
   const materials = [
     new THREE.MeshPhongMaterial({color: 0xf9f9f9}), //white 0
@@ -219,7 +183,6 @@ function loadStage_1() {
   [5,1,1], [5,1,0], [6,1,0], [6,1,1], [7,1,1], [7,1,0]];
 
   const clips = gltf.animations;
-  // const clipIdle = THREE.AnimationClip.findByName(clips, 'idle');
   const clipWalk = THREE.AnimationClip.findByName(clips, 'walk');
   const clipRun = THREE.AnimationClip.findByName(clips, 'run');
 
@@ -300,7 +263,6 @@ function loadStage_1() {
     });
     face.material = materials[combo[1]];
     name.material = materials[combo[2]];
-    // face.position.z=0.15;
     head.add(face);
     torso.add(name);
 
@@ -349,17 +311,11 @@ function loadStage_1() {
 }
 
 function loadStage_2(){
-  // scene.remove(group);
-  // group = new THREE.Group();
-  // scene.add(group);
-
-  // console.log(gltf);
-
   const person = people[0];
   itemsToLoad++;
   textureLoader.load('texture/heart.png', (texture) => {
     const material = new THREE.SpriteMaterial({
-      map:texture, transparent:true, opacity:0.5, fog:false //sizeAttenuation:false
+      map:texture, transparent:true, opacity:0.5, fog:false 
     });
     heart = new THREE.Sprite(material);
     heart.center.set(0.5, 0.5);
@@ -368,13 +324,13 @@ function loadStage_2(){
     pos.y += 0.2; pos.z += 0.5;
     heart.position.copy(pos);
     
-    const big = 0.003, small = 0.0001;
+    const big = 0.01, small = 0.0001;
     const size = new THREE.Vector3(material.map.image.width,material.map.image.height,1);
     heart.scale.set(small * size.x, small * size.y, 1);
 
     heart.userData = {
       origin:pos, size:size, big:big, small:small, 
-      duration: 0.4, elapsed: 0, beats: 0, near: new THREE.Vector3()
+      pause: 0.8, elapsed: 0, beats: 0, near: new THREE.Vector3()
     };
     scene.add( heart );
     beatingHeart = true;
@@ -482,7 +438,6 @@ function addHealthBar(index, texture, visible){
   cameraGroup.add( sprite );
 }
 
-
 // HANDLE MOUSE EVENTS
 function handleMouseDown(event){
   event.preventDefault();
@@ -587,9 +542,7 @@ function handleTouchMove(event) {
   if(!mouseDown) { return; }
 
   let tx = -1 + (event.targetTouches[0].clientX / WIDTH)*2;
-
   let lr = mousePos.x - tx;
-
   camera.position.x += lr * 30;
   let bound = 72;
   if(camera.position.x < -bound){camera.position.x = -bound;}
@@ -606,9 +559,7 @@ function handleTouchEnd(event) {
     person.userData.action.timeScale = person.userData.speed;
   });
   slowmo = false;
-
   mouseDown = false;
-
 }
 
 function getRandomInteger(min, max) {
@@ -668,9 +619,7 @@ function animate(){
       else if(dist > 30){bar = 2;}
       else if(dist > 20){bar = 3;}
       else if(dist >= 0){bar = 4;}
-      // console.log(bar);
       for(let i = 0; i < 5; i++){
-        
         if(bar == i){
           health[i].visible = true;
           health[i].material.opacity= (Math.sin(runTime*(i+5)) + 1) * 0.5;}
@@ -697,31 +646,28 @@ function animate(){
     // heart
     if(itemsToLoad == 0){
       if(beatingHeart){
-        let hd = heart.userData, alpha;
+        let hd = heart.userData;
         hd.elapsed += delta;
         
         if(lastBeat){
-          if(hd.elapsed < 1.6){
-            alpha = hd.elapsed / 1.6;
+          if(hd.elapsed < 2){}
+          else if(hd.elapsed < 3.6){
+            let alpha = (hd.elapsed - 2) / 1.6;
             heart.position.lerpVectors(hd.origin, hd.near, easeOutBack(alpha));
-            camera.position.y = lerp(camStart.y, camStop.y, alpha);
-            camera.lookAt(camLookat);
           }
-          else if(hd.elapsed < 3){
+          else if(hd.elapsed < 5){
             if(hd.beats == 0){
               hd.beats = 1;
               heart.position.copy(hd.near);
-              camera.position.y = camStop.y;
-              camera.lookAt(camLookat);
             }
           }
-          else if(hd.elapsed < 15){
+          else if(hd.elapsed < 17){
             if(hd.beats == 1){
               hd.beats = 2;
               showText();
             }
             else{
-              heart.material.opacity = 1 - (hd.elapsed - 3) / 12;
+              heart.material.opacity = 1 - (hd.elapsed - 5) / 12;
             }
           }
           else {
@@ -731,24 +677,32 @@ function animate(){
           }
         }
         else{
-          alpha = hd.elapsed / hd.duration;
-          if(alpha < 1.5){
+          if(hd.elapsed < 0.15){
+            let alpha = hd.elapsed / 0.15;
             heart.position.lerpVectors(hd.origin, camera.position, alpha);
             let scale = lerp(hd.small, hd.big, alpha);
             let size = hd.size;
             heart.scale.set(scale * size.x, scale * size.y, 1);
           }
-          else if(alpha < 2){
+          else if(hd.elapsed < 0.55){
+            let alpha = (hd.elapsed - 0.15) / 0.3;
+            heart.position.lerpVectors(hd.origin, camera.position, alpha);
+            let scale = lerp(hd.small, hd.big, alpha);
+            let size = hd.size;
+            heart.scale.set(scale * size.x, scale * size.y, 1);
+          }
+          else if(hd.elapsed < 0.75){
+            let alpha = (hd.elapsed - 0.55) / 0.2;
             switch(hd.beats){
               case 0: 
-                camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha - 1.5);
+                camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha * 0.5);
                 break;
               case 1: 
-                camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha - 1);
+                camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha * 0.5 + 0.5);
                 break;
             }
           }
-          else if(alpha < 3.5){
+          else if(hd.elapsed < 0.8){
             switch(hd.beats){
               case 0: 
                 camera.quaternion.slerpQuaternions(camQStart, camQStop, 0.5);
@@ -759,7 +713,7 @@ function animate(){
                 break;
             }
           }
-          else {
+          else if(hd.elapsed > (0.8 + hd.pause)){
             hd.elapsed = 0;
             hd.beats++;
           }
@@ -768,26 +722,40 @@ function animate(){
         // move camera
         if(panningCamera){
           camElapsed += delta;
-          let alpha = camElapsed / camDuration;
-          if(alpha >= 1) {
-            alpha = 1;
-            camStart.copy(camera.position);
-            panningCamera = false;
-            lastBeat = true;
-            hd.beats = 0;
-            hd.elapsed = 0;
-            let scale = hd.small;
-            let size = hd.size;
-            heart.scale.set(scale * size.x, scale * size.y, 1);
-            heart.material.opacity = 1;
-            hd.near.copy(camStop);
-            hd.near.z -= 0.15;
+          if(camElapsed < camDuration){
+            let alpha = camElapsed / camDuration;
+            camera.position.lerpVectors(camStart, camStop, easeInOutBack(alpha));
+            camera.position.y += Math.sin(camElapsed * 14) * 0.5;
+            if(alpha > 0.5) {hd.pause = 0;}
           }
-          else if(alpha > 0.66) {hd.duration = 0.2;}
-          else if(alpha > 0.33) {hd.duration = 0.3;}
-
-          camera.position.lerpVectors(camStart, camStop, easeInOutBack(alpha));
-          camera.position.y += Math.sin(camElapsed * 14) * 0.5;
+          else{
+            if(hd.pause == 0){
+              camera.position.copy(camStop);
+              camera.position.y += Math.sin(camElapsed * 14) * 0.5;
+              camStart.copy(camera.position);
+              hd.pause = 100;
+            }
+            else{
+              let alpha = (camElapsed - camDuration) / 0.2;
+              if(alpha < 1){
+                camera.position.y = lerp(camStart.y, camStop.y, alpha);
+              }
+              else{
+                camera.position.y = camStop.y;
+                panningCamera = false;
+                lastBeat = true;
+                hd.beats = 0;
+                hd.elapsed = 0;
+                let scale = hd.small;
+                let size = hd.size;
+                heart.scale.set(scale * size.x, scale * size.y, 1);
+                heart.material.opacity = 1;
+                heart.position.copy(camera.position);
+                hd.near.copy(camStop);
+                hd.near.z -= 0.15;
+              }
+            }
+          }
           camera.lookAt(camLookat);
         }
       }
@@ -825,7 +793,6 @@ function animate(){
   }
   else { return; }
 
-  // renderer.render(sceneOrtho, cameraOrtho);
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
