@@ -116,6 +116,7 @@ function loadStage_0(){
       case 'atmosphere': atmosphere = node; break;
     }
   });
+  earth.rotateZ(-0.41);
 
   group.add(atmosphere);
   group.add(earth);
@@ -582,6 +583,29 @@ function createBalloons(){
   }
 }
 
+function lerp(a, b, x){
+  return a + (b - a) * x;
+}
+
+function easeInBack(x) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return c3 * x * x * x - c1 * x * x;
+}
+
+function easeInOutCubic(x) {
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+}
+
+function easeInElastic(x) {
+  const c4 = Math.PI;
+  return x === 0
+    ? 0
+    : x === 1
+    ? 1
+    : -Math.pow(2, 10 * x - 10) * Math.sin((x * 10 - 10.75) * c4);
+}
+
 function animate(){
   let delta = clock.getDelta();
   runTime += delta;
@@ -590,23 +614,33 @@ function animate(){
       health[0].material.opacity= (Math.sin(runTime*5) + 1) * 0.5;
       earth.rotateY(spinSpeed);
       if(step > 0){
-        if(step <= 50){
-          if(zoomCount==0){
-            let camZ = lerp(100, 3.2, easeOutCubic(step/50));
-            // let camZ = lerp(100, 3.2, step/50);
-            let s = 2*Math.PI / -96.8;
-            let t = s * (camZ - 100);
-            let camX = Math.sin(t) * 10;
-            camera.position.set(camX, 0, camZ);
+        if(zoomCount==0){
+          if(step <= 100){
+            let alpha = step/100;
+            alpha = easeInOutCubic(alpha);
+            let camZ = lerp(100, 3.2, alpha);
+            let ampX = lerp(25, 5, alpha);
+            let ampY = lerp(15, 5, alpha);
+            let camX = Math.sin(2 * Math.PI * alpha) * ampX;
+            let camY = -Math.sin(4 * Math.PI * alpha) * ampY;
+            camera.position.set(camX, camY, camZ);
+            step++;
           }
           else{
-            //second click
-            camera.position.z = lerp(3.2, 0.5, step/50);
+            step = 0; zoomCount++; spinSpeed = 0.01;
           }
-          step++;
         }
-        else if(zoomCount == 1){ loadStage_1(); }
-        else{step = 0; zoomCount++; spinSpeed = 0.01;}
+        else{
+          if(step <= 50){
+            let alpha = step/50;
+            alpha = easeInElastic(alpha);
+            camera.position.z = lerp(3.2, 0.5, alpha);
+            step++;
+          }
+          else{
+            loadStage_1();
+          }
+        }
       }
     }
   }
@@ -651,19 +685,14 @@ function animate(){
         
         if(lastBeat){
           if(hd.elapsed < 2){}
-          else if(hd.elapsed < 3.6){
-            let alpha = (hd.elapsed - 2) / 1.6;
-            heart.position.lerpVectors(hd.origin, hd.near, easeOutBack(alpha));
-          }
           else if(hd.elapsed < 5){
-            if(hd.beats == 0){
-              hd.beats = 1;
-              heart.position.copy(hd.near);
-            }
+            let alpha = (hd.elapsed - 2) / 1.6;
+            if(alpha > 1){alpha = 1;}
+            heart.position.lerpVectors(hd.origin, hd.near, easeInOutCubic(alpha));
           }
           else if(hd.elapsed < 17){
-            if(hd.beats == 1){
-              hd.beats = 2;
+            if(hd.beats == 0){
+              hd.beats = 1;
               showText();
             }
             else{
@@ -691,29 +720,16 @@ function animate(){
             let size = hd.size;
             heart.scale.set(scale * size.x, scale * size.y, 1);
           }
-          else if(hd.elapsed < 0.75){
-            let alpha = (hd.elapsed - 0.55) / 0.2;
-            switch(hd.beats){
-              case 0: 
-                camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha * 0.5);
-                break;
-              case 1: 
-                camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha * 0.5 + 0.5);
-                break;
-            }
-          }
           else if(hd.elapsed < 0.8){
-            switch(hd.beats){
-              case 0: 
-                camera.quaternion.slerpQuaternions(camQStart, camQStop, 0.5);
-                break;
-              case 1: 
-                camera.quaternion.copy(camQStop);
-                panningCamera = true;
-                break;
-            }
+            let alpha = (hd.elapsed - 0.55) / 0.2;
+            if(alpha > 1) { alpha = 1; }
+            alpha = easeInOutCubic(alpha);
+            if(hd.beats == 0) {alpha = alpha * 0.5;}
+            else {alpha = alpha * 0.5 + 0.5;}
+            camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha);
           }
           else if(hd.elapsed > (0.8 + hd.pause)){
+            if(hd.beats == 1){panningCamera = true;}
             hd.elapsed = 0;
             hd.beats++;
           }
@@ -724,19 +740,35 @@ function animate(){
           camElapsed += delta;
           if(camElapsed < camDuration){
             let alpha = camElapsed / camDuration;
-            camera.position.lerpVectors(camStart, camStop, easeInOutBack(alpha));
+            alpha = easeInBack(alpha);
+            camera.position.lerpVectors(camStart, camStop, alpha);
             camera.position.y += Math.sin(camElapsed * 14) * 0.5;
-            if(alpha > 0.5) {hd.pause = 0;}
+            if(alpha > 0.5) {hd.pause = 100; heart.material.opacity = 0;}
           }
-          else{
-            if(hd.pause == 0){
-              camera.position.copy(camStop);
-              camera.position.y += Math.sin(camElapsed * 14) * 0.5;
-              camStart.copy(camera.position);
-              hd.pause = 100;
+          else if(camElapsed < camDuration + 4){
+            let alpha = (camElapsed - camDuration) / 4;
+            if(camStart.x - camStop.x > 0){
+              camera.position.set(
+                camStop.x - Math.sin(2 * Math.PI * alpha) * 4,
+                camStop.y + Math.sin(camElapsed * 14) * 0.2,
+                camStop.z - Math.sin(Math.PI * alpha) * 8);
             }
             else{
-              let alpha = (camElapsed - camDuration) / 0.2;
+              camera.position.set(
+                camStop.x + Math.sin(2 * Math.PI * alpha) * 4,
+                camStop.y + Math.sin(camElapsed * 14) * 0.2,
+                camStop.z - Math.sin(Math.PI * alpha) * 8);
+            }
+          }
+          else{
+            if(hd.pause == 100){
+              camera.position.copy(camStop);
+              camera.position.y += Math.sin(camElapsed * 14) * 0.2;
+              camStart.copy(camera.position);
+              hd.pause = 200;
+            }
+            else{
+              let alpha = (camElapsed - camDuration - 4) / 0.2;
               if(alpha < 1){
                 camera.position.y = lerp(camStart.y, camStop.y, alpha);
               }
@@ -764,13 +796,17 @@ function animate(){
     // salute
     if(greeting){
       person.userData.mixer.update(delta);
-      if(group.children.length > 0){group.children.pop();}
+      if(group.children.length > 0){
+        if(step%2 == 0){group.children.pop();}
+        step++;
+      }
     }
     else{
       const dist = camera.position.distanceTo(camLookat);
       if(dist < 8){
         greeting = true; 
         camera.remove(cameraGroup);
+        step = 0;
       }
     }
     // scene.remove(group);
@@ -795,25 +831,6 @@ function animate(){
 
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
-}
-
-function lerp(a, b, x){
-  return a + (b - a) * x;
-}
-
-function easeInOutBack(x){
-  const c2 = 1.525;
-  return (x < 0.5
-    ? (Math.pow(2 * x, 2) * ((c2 + 1) * 2 * x - c2)) / 2
-    : (Math.pow(2 * x - 2, 2) * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2);
-}
-
-function easeOutCubic(x){
-  return 1 - Math.pow(1 - x, 3);
-}
-
-function easeOutBack(x) {
-  return 1 + Math.pow(x - 1, 3) ;
 }
 
 function init(event){
