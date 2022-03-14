@@ -276,16 +276,16 @@ function loadStage_1() {
     
     // ANIMATION
     let mixer = new THREE.AnimationMixer(person);
-    let whatAction = getRandomInteger(0, nAnimations), action, speed;
+    let whatAction = getRandomInteger(0, nAnimations), action, animationSpeed, movementSpeed;
     switch(whatAction){
       case 0:
-        action = mixer.clipAction(clipWalk); speed = 1; break;
+        action = mixer.clipAction(clipWalk); animationSpeed = 1.2; movementSpeed = 0.02; break;
       case 1:
-        action = mixer.clipAction(clipWalk); speed = 1.4; break;
+        action = mixer.clipAction(clipWalk); animationSpeed = 2.2; movementSpeed = 0.02; break;
       case 2:
-        action = mixer.clipAction(clipRun); speed = 1.7; break;
+        action = mixer.clipAction(clipRun); animationSpeed = 1.7; movementSpeed = 0.06; break;
     }
-    action.timeScale = speed;
+    action.timeScale = animationSpeed;
     action.play();
     mixer.setTime(3 * Math.random());
 
@@ -295,7 +295,7 @@ function loadStage_1() {
     person.position.z = Math.floor(loc/xLen) + z0;
     currentIndex--;
 
-    person.userData = {mixer:mixer, action:action, speed:speed};
+    person.userData = {mixer:mixer, action:action, animationSpeed:animationSpeed, movementSpeed:movementSpeed};
     people[i] = person;
   }
 
@@ -460,7 +460,7 @@ function handleMouseDown(event){
         return;
       }
       people.forEach((person)=>{
-        person.userData.action.timeScale = 0.04 * person.userData.speed;
+        person.userData.action.timeScale = 0.04 * person.userData.animationSpeed;
       });
       slowmo = true;
       break;
@@ -477,7 +477,7 @@ function handleMouseUp(event){
     case 0:break;
     case 1:
       people.forEach((person)=>{
-        person.userData.action.timeScale = person.userData.speed;
+        person.userData.action.timeScale = person.userData.animationSpeed;
       });
       slowmo = false;
       break;
@@ -531,7 +531,7 @@ function handleTouchStart(event) {
     return;
   }
   people.forEach((person)=>{
-    person.userData.action.timeScale = 0.04 * person.userData.speed;
+    person.userData.action.timeScale = 0.04 * person.userData.animationSpeed;
   });
   slowmo = true;
   mouseDown = true;
@@ -557,7 +557,7 @@ function handleTouchEnd(event) {
   if(itemsToLoad != 0){ return; }
 
   people.forEach((person)=>{
-    person.userData.action.timeScale = person.userData.speed;
+    person.userData.action.timeScale = person.userData.animationSpeed;
   });
   slowmo = false;
   mouseDown = false;
@@ -668,8 +668,7 @@ function animate(){
         }
         else{
           //advance
-          if(slowmo){person.translateZ(0.05 * person.userData.action.timeScale);}
-          else{person.translateZ(0.05 * person.userData.speed);}
+          person.translateZ(person.userData.movementSpeed * person.userData.action.timeScale);
         }
       });
     }
