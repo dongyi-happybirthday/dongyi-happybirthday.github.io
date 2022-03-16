@@ -10,27 +10,70 @@
       padding: 0;
       border: 0;
     }
+    @font-face {
+      font-family: marioFont;
+      src: url("../font/SuperMario256.ttf");
+    }
+    #log {
+      position: absolute;
+      top: 93%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 75%;
+      z-index: 100;
+      text-align: center;
+      font-size: 40px;
+      font-family: marioFont;
+      color: #00ffff;
+      text-shadow:
+        -1px -1px 0 #000,  
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+      border: 5px solid white;
+      border-radius: 15px;
+      background-color: #ffffff4a;
+      padding: 5px;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    #day {
+      color: #ff00ff;
+    }
+    #number {
+      color: yellow;
+      animation: blink 1s linear infinite;
+    }
     #text {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 80%;
+      width: 90%;
       height: 10%;
       z-index: 100;
-      display: block;
       text-align: center;
-      font-size: 6vw;
+      font-size: 38px;
       font-family: monospace, monospace;
       color: #0000ff;
       text-shadow: 1px 1px #afafff;
       opacity: 1;
       transition: 3s opacity;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
     #blinker{
-      animation: blinker 1s linear infinite;
+      animation: blink 1s linear infinite;
     }
-    @keyframes blinker{
+    @keyframes blink{
       50%{
         opacity: 0;
       }

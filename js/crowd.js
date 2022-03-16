@@ -80,9 +80,9 @@ function createScene() {
   container.appendChild(renderer.domElement);
 
   mousePos = new THREE.Vector2();
-  container.addEventListener('mousedown', handleMouseDown, true);
-  container.addEventListener('mouseup', handleMouseUp, true);
-  container.addEventListener('mousemove', handleMouseMove, true);
+  container.addEventListener('mousedown', handleMouseDown, false);
+  container.addEventListener('mouseup', handleMouseUp, false);
+  container.addEventListener('mousemove', handleMouseMove, false);
   window.addEventListener('resize', handleWindowResize, false);
 
   container.addEventListener("touchstart", handleTouchStart, false);
@@ -122,12 +122,14 @@ function loadStage_0(){
   group.add(earth);
 
   camera.position.set(0, 0, 100);
+  showCaptainLog();
 
   stage = 0;
   animate();
 }
 
 function loadStage_1() {
+  document.getElementById('log').remove();
   scene.remove(group);
   group = new THREE.Group();
   scene.add(group);
@@ -421,7 +423,19 @@ function showText(){
     }
   }
   setTimeout(typewriter, 1000);
-  container.addEventListener('mouseup', handleMouseUp, true);
+  container.addEventListener('mouseup', handleMouseUp, false);
+}
+
+function showCaptainLog(){
+  const day1 = new Date(2021, 5, 2); // '2021-06-02'
+  const dayn = Math.ceil((Date.now() - day1) / (1000 * 60 * 60 * 24));
+  const str = 'Captain\'s log:<br><span id="day">Day</span> <span id="number">' + dayn + '</span>';
+
+  const container = document.createElement('div');
+  container.id = 'log';
+  container.innerHTML = str;
+  document.body.appendChild(container);
+  container.addEventListener('mousedown', handleMouseDown, false);
 }
 
 function addHealthBar(index, texture, visible){
@@ -442,10 +456,7 @@ function addHealthBar(index, texture, visible){
 // HANDLE MOUSE EVENTS
 function handleMouseDown(event){
   event.preventDefault();
-  if(mouseDown || itemsToLoad != 0){ return; }
-  mousePos.x = (event.clientX / WIDTH) * 2 - 1;
-  mousePos.y = -(event.clientY / HEIGHT) * 2 + 1;
-  raycaster.setFromCamera( mousePos, camera );
+  if(itemsToLoad != 0){ return; }
   const intersects = [];
   switch(stage){
     case 0:
@@ -453,6 +464,9 @@ function handleMouseDown(event){
       step = 1;
       break;
     case 1:
+      mousePos.x = (event.clientX / WIDTH) * 2 - 1;
+      mousePos.y = -(event.clientY / HEIGHT) * 2 + 1;
+      raycaster.setFromCamera( mousePos, camera );
       targetBox.raycast(raycaster, intersects);
       if(intersects.length > 0){
         targetBox.removeFromParent();
@@ -463,11 +477,21 @@ function handleMouseDown(event){
         person.userData.action.timeScale = 0.04 * person.userData.animationSpeed;
       });
       slowmo = true;
+      mouseDown = true;
       break;
-    case 2: break;
+    case 2: 
+      if(playingSong){
+        mousePos.x = (event.clientX / WIDTH) * 2 - 1;
+        mousePos.y = -(event.clientY / HEIGHT) * 2 + 1;
+        raycaster.setFromCamera( mousePos, camera );
+        raycaster.intersectObjects(balloons, true, intersects);
+        if(intersects.length > 0){
+          let balloon = intersects[0].object.parent;
+          balloon.userData.speed = 0.3;
+        }
+      }
+      break;
   }
-  
-  mouseDown = true;
 }
 
 function handleMouseUp(event){
@@ -480,6 +504,7 @@ function handleMouseUp(event){
         person.userData.action.timeScale = person.userData.animationSpeed;
       });
       slowmo = false;
+      mouseDown = false;
       break;
     case 2:
       if(canPlaySong && !playingSong){
@@ -489,7 +514,6 @@ function handleMouseUp(event){
       } 
       break;
   }
-  mouseDown = false;
 }
 
 function handleMouseMove(event) {
@@ -573,11 +597,18 @@ function createBalloons(){
     let m = new THREE.MeshPhongMaterial({color: Math.random() * 0xaf62ff,shininess: 10});
     let g = new THREE.SphereGeometry(0.5);
     let b = new THREE.Mesh(g, m);
+
+    let t = new THREE.Mesh(
+      new THREE.BoxGeometry(), 
+      new THREE.MeshBasicMaterial({transparent:true, opacity:0}));
+    t.layers.set( 1 );
+    b.add( t );
+
     b.position.set(
       pos.x + Math.random()*8-4,
       Math.random()*10 - 13,
       pos.z + (Math.random() < 0.5 ? Math.random()+1 : Math.random()-2));
-    b.userData = {speed: Math.random() * (0.06 - 0.01) + 0.01};
+    b.userData = {speed: Math.random() * 0.05 + 0.01};
     balloons.push(b);
     scene.add(b);
   }
@@ -820,7 +851,7 @@ function animate(){
             pos.x + Math.random()*8-4,
             -3,
             pos.z + (Math.random() < 0.5 ? Math.random()+1 : Math.random()-2));
-          b.userData.speed = Math.random() * (0.06 - 0.01) + 0.01;
+          b.userData.speed = Math.random() * 0.05 + 0.01;
         }
         else{b.position.y+=b.userData.speed;}
       });
