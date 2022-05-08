@@ -4,7 +4,7 @@ import { GLTFLoader } from '../js/GLTFLoader.js';
 
 // THREEJS RELATED VARIABLES
 
-let scene, camera, // disposables = []
+let scene, camera,
 textureLoader, gltf, itemsToLoad = 0,
 renderer, clock, people, 
 step = 0, zoomCount = 0, spinSpeed = 0.03, 
@@ -12,14 +12,14 @@ horizon = -56, health, raycaster, targetBox, earth, group, cameraGroup,
 greeting = false, songMixer, heart, beatingHeart = false, lastBeat = false,
 camStart, camStop, camLookat, camDuration = 0, camElapsed = 0, panningCamera = false,
 camQStart, camQStop, canPlaySong = false, playingSong = false, runTime = 0, balloons = [],
+fireworks = [], launcherTexture, particleTexture, launchTimer = -1,
 
 //SCREEN & MOUSE VARIABLES
 
 HEIGHT, WIDTH, mousePos, 
-mouseDown = false, 
+mouseDown = false, mouseMove = false,
 slowmo = false,
-stage = -1,
-tpCache = [];
+stage = -1;
 
 //INIT THREE JS, SCREEN AND MOUSE EVENTS
 
@@ -56,9 +56,9 @@ function createScene() {
   const gltfLoader = new GLTFLoader();
   gltfLoader.load( 'models/model.glb', 
     function ( results ) {
+      // console.log(results);
       gltf = results;
       loadStage_0();
-      //console.log(gltf);
     },
     // called while loading is progressing
     function ( xhr ) {
@@ -129,7 +129,6 @@ function loadStage_0(){
 }
 
 function loadStage_1() {
-  document.getElementById('log').remove();
   scene.remove(group);
   group = new THREE.Group();
   scene.add(group);
@@ -148,7 +147,6 @@ function loadStage_1() {
 
   camera.position.set(0, 6, 0);
   camera.lookAt(0, 0, -20);
-
 
   let model, name01, name02, face01, faces = [], hat, ground; 
   gltf.scene.traverse((node)=>{
@@ -290,7 +288,6 @@ function loadStage_1() {
     action.timeScale = animationSpeed;
     action.play();
     mixer.setTime(3 * Math.random());
-
     
     loc = locs[currentIndex];
     person.position.x = loc % xLen + x0;
@@ -369,6 +366,587 @@ function loadStage_2(){
   stage = 2;
 }
 
+function loadStage_3() {
+  scene.remove(group);
+  cameraGroup.remove(health[0]);
+  group = new THREE.Group();
+  scene.add(group);
+
+  const nPeople = 3;
+  const happyFaces = new Array(nPeople);
+  const sadFaces = new Array(nPeople);
+  const number520 = new Array(nPeople);
+  let model, ground, theHeart, thePuff;
+  gltf.scene.traverse((node)=>{
+    switch(node.name){
+      case 'ground': ground = node; break;
+      case 'person': model = node; break;
+      case 'face01': happyFaces[0] = node; break;
+      case 'face11': happyFaces[1] = node; break;
+      case 'face02': happyFaces[2] = node; break;
+      case 'face08': sadFaces[0] = node; break;
+      case 'face10': sadFaces[1] = node; break;
+      case 'face15': sadFaces[2] = node; break;
+      case 'number_5': number520[0] = node; break;
+      case 'number_2': number520[1] = node; break;
+      case 'number_0': number520[2] = node; break;
+      case 'heart': theHeart = node; break;
+      case 'puff': thePuff = node; break;
+    }
+  });
+  
+  const clips = gltf.animations;
+  const sadClip = THREE.AnimationClip.findByName(clips, 'depressed');
+  const happyClip = THREE.AnimationClip.findByName(clips, 'happy');
+  const jumpRClip = THREE.AnimationClip.findByName(clips, 'jump_R');
+  const jumpLClip = THREE.AnimationClip.findByName(clips, 'jump_L');
+  const jumpFClip = THREE.AnimationClip.findByName(clips, 'jump_F');
+  
+  const center = 0, seperation = 9, danceHeight = 5, danceOriginZ = -28;
+  const sitPos = [center - 13.5 - seperation, center, center + 13.5 + seperation];
+  const dancePos = [center - 7.25 - seperation, center - 6.25, center + 19.75 + seperation];
+
+  const faceMat = new THREE.MeshPhongMaterial({color: 0x060606, side: THREE.DoubleSide});
+  const bodyColors = [new THREE.Color(0xF49F0A),new THREE.Color(0x00A6A6),new THREE.Color(0xEB4B73)]; // yellow, green, pink
+  
+  people = new Array(nPeople);
+
+  for (let i = nPeople - 1; i >= 0; i--) {
+    let person, heart, puff;
+    if(i==0){
+      person = model;
+      heart = theHeart;
+      puff = thePuff;
+    }
+    else{
+      person = model.clone();
+      heart = theHeart.clone();
+      puff = thePuff.clone();
+    }
+    
+    let head;
+    let bodyMat = new THREE.MeshPhongMaterial({color: bodyColors[i], side: THREE.DoubleSide
+      , depthTest:false, transparent:true, opacity:0.5});
+
+    person.traverse((node) => {
+      if(node.isMesh){
+        switch(node.name){
+          case 'head01':
+            if(i==2){head = node;}else{node.visible = false;} break;
+          case 'head02':
+            if(i==0){head = node;}else{node.visible = false;} break;
+          case 'head03':
+            if(i==1){head = node;}else{node.visible = false;} break;
+        }
+        node.material = bodyMat;
+      }
+    });
+    const happyFace = happyFaces[i]; happyFace.material = faceMat; happyFace.visible = false;
+    const sadFace = sadFaces[i]; sadFace.material = faceMat;
+    head.add(happyFace);
+    head.add(sadFace);
+    
+    person.position.set(sitPos[i], 0, 0);
+
+    const dancePosition = new THREE.Vector3( dancePos[i], danceHeight, danceOriginZ );
+
+    const number = number520[i];
+    number.material = bodyMat;
+    number.position.copy(dancePosition);
+    number.position.y = -100;
+
+    puff.material = new THREE.MeshBasicMaterial({color: 0xaaaaaa, transparent: true, opacity: 0});
+    puff.position.set(person.position.x, 1, person.position.z - 2);
+    
+    heart.material = new THREE.MeshPhongMaterial({color: bodyColors[i], side: THREE.DoubleSide
+      , depthTest: false, emissive: bodyColors[i]});
+    heart.renderOrder = 100;
+    let heartPosition = new THREE.Vector3(sitPos[(i+1)%nPeople] + 4, 0.7, 0);
+    heart.position.copy(heartPosition);
+    let hs = 2;
+    heart.scale.set(hs,hs,hs);
+    scene.add(heart);
+
+    let personIntersect = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5, 3.5, 1.5), 
+      new THREE.MeshBasicMaterial({transparent:true, opacity:0}));
+    personIntersect.layers.set( 1 );
+    personIntersect.position.copy(person.position);
+    personIntersect.userData = {type:'person', person:person};
+    group.add(personIntersect);
+
+    let heartIntersect = new THREE.Mesh(
+      new THREE.BoxGeometry(4, 3.5, 0.5), 
+      new THREE.MeshBasicMaterial({transparent:true, opacity:0}));
+    heartIntersect.layers.set( 1 );
+    heartIntersect.position.copy(heartPosition);
+    heartIntersect.userData = {type:'heart', person:person};
+    group.add(heartIntersect);
+
+    // ANIMATION
+    const mixer = new THREE.AnimationMixer(person);
+    const actions = {
+      sad: mixer.clipAction(sadClip),
+      happy: mixer.clipAction(happyClip), 
+      r: mixer.clipAction(jumpRClip), 
+      l: mixer.clipAction(jumpLClip), 
+      f: mixer.clipAction(jumpFClip)
+    };
+    actions.happy.loop = THREE.LoopOnce;
+    actions.r.loop = THREE.LoopOnce;
+    actions.l.loop = THREE.LoopOnce;
+    actions.f.loop = THREE.LoopOnce;
+    
+    actions.sad.timeScale = Math.random() + 0.7;
+    actions.sad.time = 0.5 * i;
+    actions.sad.play();
+    
+    person.userData = {
+      mixer:mixer, actions:actions, danceNumber:i, dancePosition:dancePosition, turn:-1
+      , rotationRemain:0, nextAction:null, happyFace:happyFace, sadFace:sadFace
+      , number:number, numberRising:false, numberElapsed:0, puff:puff
+      , material:bodyMat, heart:heart, heartPosition:heartPosition, heartState:0, heartElapsed:0
+    };
+    people[i] = person;
+    scene.add(person);
+  }
+
+  ground.position.set(34,-1,110);
+  ground.rotateY(Math.PI/2);
+  let gs = 2;
+  ground.scale.set(gs,gs,gs);
+  group.add(ground);
+
+  camera.position.copy(people[1].position);
+  camera.position.y += 4;
+  camera.position.z += 23;
+
+  let pouchIntersect = new THREE.Mesh(
+    new THREE.BoxGeometry(3.5, 3, 0.5), 
+    new THREE.MeshBasicMaterial({transparent:true, opacity:0}));
+  pouchIntersect.layers.set( 1 );
+  cameraGroup.add(pouchIntersect);
+  cameraGroup.userData = {pouchIntersect:pouchIntersect, person:null, count:3};
+  pouchIntersect.position.set(0, -4, -9);
+  pouchIntersect.userData = {type:'pouch'};
+
+  // fireworks
+  itemsToLoad += 2;
+  textureLoader.load('texture/launcher.png', (texture) => {launcherTexture = texture; itemsToLoad--;});
+  textureLoader.load('texture/dot.png', (texture) => {particleTexture = texture; itemsToLoad--;});
+  launchTimer = 30;
+
+  stage = 3;
+}
+
+function createFireworks(){
+  const color = new THREE.Color();
+  let hue = Math.random();
+  color.setHSL( hue, 1.0, 0.4 );
+
+  const launcherGeo = new THREE.BufferGeometry();
+  launcherGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( [0, 0, 0], 3 ) );
+  const launcherMat = new THREE.PointsMaterial( { map: launcherTexture, color: color, transparent:true } );
+  const launcher = new THREE.Points( launcherGeo, launcherMat );
+
+  const launchFrom = camera.position.clone();
+  launchFrom.x += randFloat(-20,20);
+  launchFrom.z += 20;
+  launchFrom.y -= randFloat(30,100);
+  const launchTo = launchFrom.clone();
+  launchTo.x += randFloat(-5,5);
+  launchTo.z -= randFloat(20,40);
+  launchTo.y += randFloat(-5,5);
+
+  const positions = [];
+  const colors = [];
+  const sizes = [];
+  const translations = [];
+  const timings = [];
+  let patternDuration, downSpeed, flashPoint;
+
+  const whatPattern = Math.random();
+  if(whatPattern < 0.4){
+    patternDuration = 4; downSpeed = 0.06; flashPoint = 2;
+    let particles = 50;
+    // ring # 1
+    let p = Math.floor(particles * 0.7), radius = 3.4, velocity = 0.3, size = 4.0;
+    color.setHSL( hue, 1.0, 0.5 );
+    makeRing(positions, translations, colors, sizes, timings, color, p, radius, velocity, size);
+    
+    // ring # 2
+    p = particles - p; radius = 3.2; velocity = 0.2; size = 4.0;
+    hue = hue < 0.5 ? hue + 0.5 : hue - 0.5;
+    color.setHSL( hue, 1.0, 0.5 );
+    makeRing(positions, translations, colors, sizes, timings, color, p, radius, velocity, size);
+  }
+  else if(whatPattern < 0.8){
+    // bundle
+    patternDuration = 5; downSpeed = 0.01; flashPoint = 0.0;
+    let particles = 40, radius = 2, velocity = 0.3, size = 2.0;
+    makeBundle(positions, translations, colors, sizes, timings, color, particles, radius, velocity, size);
+  }
+  else {
+    patternDuration = 4; downSpeed = 0.1; flashPoint = 1.5;
+    // i heart u
+    let particles = 80, velocity = 0.02, size = 2.0, scale = 2;
+    color.setHSL( hue, 1.0, 0.5 );
+    makePhrase(positions, translations, colors, sizes, timings, color, particles, velocity, size, scale);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4).setUsage(THREE.DynamicDrawUsage));
+  geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1).setUsage(THREE.DynamicDrawUsage));
+
+  const pattern = new THREE.Points( geometry, getFireworkMaterial() );
+
+  const firework = new THREE.Object3D();
+  firework.userData = {
+    launcher: launcher, 
+    launchFrom: launchFrom,
+    launchTo: launchTo,
+    status: 0, elapsed: 0, launchDuration: randFloat(0.5, 1.5), waitDuration: randFloat(0.1, 0.5),
+    pattern: pattern, 
+    translations: translations, timings: timings,
+    patternDuration: patternDuration, downSpeed: downSpeed, flashPoint: flashPoint};
+
+  fireworks.push(firework);
+  scene.add( launcher );
+}
+
+function getFireworkMaterial(){
+
+  const vertexShader = 
+`
+attribute float size;
+varying vec4 vColor;
+void main() {
+  vColor = color;
+  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+  gl_PointSize = size * ( 300.0 / -mvPosition.z );
+  gl_Position = projectionMatrix * mvPosition;
+}
+`;
+
+  const fragmentShader =
+`
+uniform sampler2D pointTexture;
+varying vec4 vColor;
+void main() {
+  gl_FragColor = vColor * texture2D( pointTexture, gl_PointCoord );
+}
+`;
+
+  const uniforms = {
+    pointTexture: { value: particleTexture }
+  };
+
+  return new THREE.ShaderMaterial( {
+    uniforms: uniforms,
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+    blending: THREE.AdditiveBlending,
+    depthTest: false,
+    transparent: true,
+    vertexColors: true
+  } );
+}
+
+function makePhrase(positions, translations, colors, sizes, timings, color, particles, velocity, size, scale){
+  const curvesArrays = [
+  [
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-0.88,-0.06,0.00),new THREE.Vector3(-1.19,0.38,0.00),new THREE.Vector3(-0.60,1.50,0.00),new THREE.Vector3(0.00,0.66,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(0.00,0.66,0.00),new THREE.Vector3(0.59,1.51,0.00),new THREE.Vector3(1.20,0.32,0.00),new THREE.Vector3(0.89,-0.05,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(0.89,-0.05,0.00),new THREE.Vector3(0.30,-0.75,0.00),new THREE.Vector3(0.51,-0.46,0.00),new THREE.Vector3(-0.00,-0.91,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-0.00,-0.91,0.00),new THREE.Vector3(-0.50,-0.46,0.00),new THREE.Vector3(-0.41,-0.71,0.00),new THREE.Vector3(-0.88,-0.06,0.00)),
+  ],
+  [
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-0.78,0.34,0.00),new THREE.Vector3(-0.42,0.80,0.00),new THREE.Vector3(0.04,0.93,0.00),new THREE.Vector3(-0.39,0.36,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-0.39,0.36,0.00),new THREE.Vector3(-1.50,-1.10,0.00),new THREE.Vector3(1.56,2.07,0.00),new THREE.Vector3(0.02,0.10,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(0.02,0.10,0.00),new THREE.Vector3(-1.48,-1.83,0.00),new THREE.Vector3(2.09,1.91,0.00),new THREE.Vector3(0.09,-0.59,0.00)),
+  ],
+  [
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.84,0.95,0.00),new THREE.Vector3(-2.83,0.95,0.00),new THREE.Vector3(-2.07,0.95,0.00),new THREE.Vector3(-2.06,0.95,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.06,0.95,0.00),new THREE.Vector3(-2.06,0.94,0.00),new THREE.Vector3(-2.06,0.80,0.00),new THREE.Vector3(-2.06,0.78,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.06,0.78,0.00),new THREE.Vector3(-2.07,0.78,0.00),new THREE.Vector3(-2.33,0.78,0.00),new THREE.Vector3(-2.35,0.78,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.35,0.78,0.00),new THREE.Vector3(-2.35,0.76,0.00),new THREE.Vector3(-2.35,-0.75,0.00),new THREE.Vector3(-2.35,-0.76,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.35,-0.76,0.00),new THREE.Vector3(-2.33,-0.76,0.00),new THREE.Vector3(-2.07,-0.76,0.00),new THREE.Vector3(-2.06,-0.76,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.06,-0.76,0.00),new THREE.Vector3(-2.06,-0.78,0.00),new THREE.Vector3(-2.06,-0.90,0.00),new THREE.Vector3(-2.06,-0.91,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.06,-0.91,0.00),new THREE.Vector3(-2.07,-0.91,0.00),new THREE.Vector3(-2.83,-0.93,0.00),new THREE.Vector3(-2.84,-0.93,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.84,-0.93,0.00),new THREE.Vector3(-2.84,-0.91,0.00),new THREE.Vector3(-2.84,-0.78,0.00),new THREE.Vector3(-2.84,-0.77,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.84,-0.77,0.00),new THREE.Vector3(-2.83,-0.77,0.00),new THREE.Vector3(-2.57,-0.76,0.00),new THREE.Vector3(-2.55,-0.76,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.55,-0.76,0.00),new THREE.Vector3(-2.55,-0.75,0.00),new THREE.Vector3(-2.54,0.77,0.00),new THREE.Vector3(-2.54,0.79,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.54,0.79,0.00),new THREE.Vector3(-2.56,0.79,0.00),new THREE.Vector3(-2.83,0.79,0.00),new THREE.Vector3(-2.85,0.79,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(-2.85,0.79,0.00),new THREE.Vector3(-2.85,0.80,0.00),new THREE.Vector3(-2.84,0.94,0.00),new THREE.Vector3(-2.84,0.95,0.00)),
+  ],
+  [
+  new THREE.CubicBezierCurve3(new THREE.Vector3(3.53,0.95,0.00),new THREE.Vector3(3.79,-1.53,0.00),new THREE.Vector3(1.67,-1.54,0.00),new THREE.Vector3(2.00,0.94,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(2.00,0.94,0.00),new THREE.Vector3(2.04,0.94,0.00),new THREE.Vector3(2.17,0.95,0.00),new THREE.Vector3(2.20,0.95,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(2.20,0.95,0.00),new THREE.Vector3(1.94,-1.32,0.00),new THREE.Vector3(3.57,-1.32,0.00),new THREE.Vector3(3.36,0.95,0.00)),
+  new THREE.CubicBezierCurve3(new THREE.Vector3(3.36,0.95,0.00),new THREE.Vector3(3.39,0.95,0.00),new THREE.Vector3(3.50,0.94,0.00),new THREE.Vector3(3.53,0.95,0.00)),
+  ]];
+
+  const lengthsArray = [0.22,0.24,0.23,0.31];
+
+  const nSplines = curvesArrays.length, holdTime = 2;
+  const radian = randFloat(-0.8, 0.8), cos = Math.cos(radian), sin = Math.sin(radian);
+
+  for(let i = 0; i < nSplines; i++){
+    let curvepath = new THREE.CurvePath();
+    curvepath.curves = curvesArrays[i];
+    let points = curvepath.getSpacedPoints( Math.round(particles * lengthsArray[i]) - 1 );
+    let len = points.length;
+    for ( let j = 0; j < len; j++ ) {
+      let p = points[j], rand = Math.random(), r = rand * 0.1 - 0.05,
+        x = (p.x + r) * scale, y = -(p.y + r) * scale,
+        nx = cos * x + sin * y ,
+        ny = cos * y - sin * x ;
+        
+      positions.push( nx, 0.0, ny );
+      translations.push( nx * velocity, 0.0, ny * velocity );
+      colors.push( color.r, color.g, color.b, 1.0 );
+      sizes.push( size );
+      timings.push(-holdTime-rand);
+    }
+  }
+}
+
+function makeRing(positions, translations, colors, sizes, timings, color, particles, radius, velocity, size){
+  const angleStep = (Math.PI + Math.PI) / particles, holdTime = 0.5;
+  for ( let i = 0; i < particles; i ++ ) {
+    let a = i * angleStep, x = Math.cos(a), y = Math.sin(a);
+    let rand = Math.random(), r = rand * 0.06, v = r / 3;
+    r += radius;
+    v += velocity;
+
+    positions.push( x * r, rand - 0.5, y * r );
+    translations.push( x * v, 0.0, y * v );
+    colors.push( color.r, color.g, color.b, 1.0 );
+    sizes.push( size );
+    timings.push(-holdTime-rand);
+  }
+}
+
+function makeBundle(positions, translations, colors, sizes, timings, color, particles, radius, velocity, size){
+  const holdTime = 1;
+  for ( let i = 0; i < particles; i ++ ) {
+    let rand = Math.random(), xr = randFloat(-radius, radius), yr = randFloat(-radius, radius) * 0.7;
+    positions.push( xr, (rand - 0.5) * radius, yr );
+    translations.push( xr * velocity, 0.0, yr * velocity );
+    color.setHSL( rand, 1.0, 0.5 );
+    colors.push( color.r, color.g, color.b, 1.0 );
+    sizes.push( size );
+    timings.push(-holdTime-rand);
+  }
+}
+
+function showFireworks(delta){
+  if(launchTimer == -1){ return; }
+  else if(launchTimer > 0){ launchTimer--; }
+  else if(launchTimer == 0){ launchTimer = getRandomInteger(90, 300); createFireworks(); }
+
+  for(let idx = fireworks.length - 1; idx >= 0; idx--) {
+    const fd = fireworks[idx].userData;
+    if(fd.status == 0){
+      // launching
+      fd.elapsed += delta;
+      let alpha = fd.elapsed / fd.launchDuration;
+      alpha = easeOutCubic(alpha);
+      const launcher = fd.launcher;
+      if(alpha <= 1){
+        launcher.position.lerpVectors(fd.launchFrom, fd.launchTo, alpha);
+        if(alpha > 0.9){
+          launcher.material.color.multiplyScalar(0.5);
+        }
+      }
+      else{
+        scene.remove(launcher);
+        launcher.geometry.dispose();
+        launcher.material.dispose();
+        // fd.elapsed = 0;
+        fd.status = 1;
+      }
+    }
+    else if(fd.status == 1){
+      // wait
+      fd.waitDuration -= delta;
+      if(fd.waitDuration < 0){
+        const pattern = fd.pattern;
+        scene.add(pattern);
+        pattern.position.copy(fd.launchTo);
+        fd.elapsed = 0;
+        fd.status = 2;
+      }
+    }
+    else if(fd.status == 2){
+      fd.elapsed += delta;
+      const elapsed = fd.elapsed;
+      const ttl = fd.patternDuration - elapsed;
+      const pattern = fd.pattern;
+      if(ttl > 0){
+        const attributes = pattern.geometry.attributes;
+        const position = attributes.position;
+        const positions = position.array;
+        const translations = fd.translations;
+        const timings = fd.timings;
+        let len = positions.length, k = 0;
+        for ( let i = 0; i < len; i++ ){
+          translations[i] *= 0.98;
+          positions[i] += translations[i];
+
+          if(i % 3 == 2){
+            let t = timings[k];
+            if(t > 0){
+              // drop
+              positions[i] += t * fd.downSpeed;
+            }
+            timings[k] = t + delta;
+            k++;
+          }
+        }
+        position.needsUpdate = true;
+        
+        const color = attributes.color;
+        const colors = color.array;
+        const size = attributes.size;
+        const sizes = size.array;
+        const flashPoint = fd.flashPoint;
+        const fduration = fd.patternDuration - flashPoint;
+        len = sizes.length;
+        for ( let i = 0; i < len; i++ ){
+          if(elapsed < flashPoint){
+            sizes[i] = (Math.sin(timings[i] * 10) * 0.08 + sizes[i]) * 0.996;
+          }
+          else{
+            // fade
+            sizes[i] *= 0.993;
+            let a = i * 4 + 3;
+            if(Math.random()*fduration > ttl){ colors[a] = 0.0; }
+            else{ colors[a] = 1.0; }
+          }
+        }
+        color.needsUpdate = true;
+        size.needsUpdate = true;
+      }
+      else{
+        scene.remove(pattern);
+        pattern.geometry.dispose();
+        pattern.material.dispose();
+        fireworks.splice(idx, 1);
+      }
+    }
+  }
+}
+
+function moveHeart2Pouch(person){
+  const data = person.userData;
+  data.heart.material.emissiveIntensity = 1.5;
+  data.heartState = 2;
+}
+
+function moveHeart2OriginalPosition(person){
+  const data = person.userData;
+  const heart = data.heart;
+  scene.add(heart);
+  heart.material.emissiveIntensity = 0;
+  data.heartState = 3;
+}
+
+function moveHeart2Person(person){
+  const data = person.userData;
+  const heart = data.heart;
+  scene.add(heart);
+  heart.material.depthTest = true;
+  heart.material.emissiveIntensity = 0;
+  heart.scale.set(2,2,2);
+  data.heartState = 4;
+}
+
+function beHappy(person){
+  const data = person.userData;
+  data.material.transparent = false;
+  data.material.opacity = 1;
+  data.material.depthTest = true;
+  data.sadFace.visible = false;
+  data.happyFace.visible = true;
+  const actions = data.actions;
+  actions.sad.crossFadeTo(actions.happy, 0.3, false);
+  scene.add(data.number);
+  scene.add(data.puff);
+  data.numberRising = true;
+}
+
+function startDance(person){
+  const data = person.userData;
+  const mixer = data.mixer;
+  mixer.stopAllAction();
+  person.position.copy(data.dancePosition);
+
+  let action;
+  switch(data.danceNumber){
+    case 0: // 5
+      person.rotateY(Math.PI); action = data.actions.l;
+      break;
+    case 1: // 2
+      person.rotateY(-Math.PI); action = data.actions.r;
+      break;
+    case 2: // 0
+      action = data.actions.f;
+      break;
+  }
+  data.turn = 0;
+  mixer.addEventListener( 'finished', transitionDanceTurn );
+  action.play();
+  cameraGroup.userData.count--;
+}
+
+function transitionDanceTurn(event){
+  const person = event.action.getRoot();
+  const data = person.userData;
+  if(data.turn < 0) { return; }
+  event.action.stop();
+  switch(data.danceNumber){
+    case 0: // number 5
+      switch(data.turn % 10){
+        case 0: person.position.x -= 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 1: person.position.z += 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 2: person.position.x += 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.r; break;
+        case 3: person.position.z += 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 4: person.position.x -= 12.5; data.nextAction = data.actions.l; break;
+        case 5: person.position.x += 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 6: person.position.z -= 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 7: person.position.x -= 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 8: person.position.z -= 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 9: person.position.x += 12.5; data.nextAction = data.actions.l; break;
+      }
+      break;
+    case 1: // number 2
+      switch(data.turn % 10){
+        case 0: person.position.x += 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 1: person.position.z += 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 2: person.position.x -= 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.l; break;
+        case 3: person.position.z += 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 4: person.position.x += 12.5; data.nextAction = data.actions.r; break;
+        case 5: person.position.x -= 12.5; data.rotationRemain=(-Math.PI/2); data.nextAction = data.actions.r; break;
+        case 6: person.position.z -= 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 7: person.position.x += 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 8: person.position.z -= 12.5; data.rotationRemain=(Math.PI/2); data.nextAction = data.actions.l; break;
+        case 9: person.position.x -= 12.5; data.nextAction = data.actions.r; break;
+      }
+      break;
+    case 2: // number 0
+      switch(data.turn % 4){
+        case 0: person.position.z += 25; data.nextAction = data.actions.r; break;
+        case 1: person.position.x -= 12.5; data.rotationRemain=(-Math.PI); data.nextAction = data.actions.f; break;
+        case 2: person.position.z -= 25; data.nextAction = data.actions.r; break;
+        case 3: person.position.x += 12.5; data.rotationRemain=(-Math.PI); data.nextAction = data.actions.f; break;
+      }
+      break;
+  }
+  data.turn++;
+}
+
 function playSong(){
   let song;
   gltf.scene.traverse((node)=>{
@@ -424,6 +1002,7 @@ function showText(){
   }
   setTimeout(typewriter, 1000);
   container.addEventListener('mouseup', handleMouseUp, false);
+  container.addEventListener("touchend", handleTouchEnd, false);
 }
 
 function showCaptainLog(){
@@ -435,7 +1014,8 @@ function showCaptainLog(){
   container.id = 'log';
   container.innerHTML = str;
   document.body.appendChild(container);
-  container.addEventListener('mousedown', handleMouseDown, false);
+  // container.addEventListener('mousedown', handleMouseDown, false);
+  // container.addEventListener("touchstart", handleTouchStart, false);
 }
 
 function addHealthBar(index, texture, visible){
@@ -454,8 +1034,7 @@ function addHealthBar(index, texture, visible){
 }
 
 // HANDLE MOUSE EVENTS
-function handleMouseDown(event){
-  event.preventDefault();
+function onMouseDown(clientX, clientY){
   if(itemsToLoad != 0){ return; }
   const intersects = [];
   switch(stage){
@@ -464,8 +1043,8 @@ function handleMouseDown(event){
       step = 1;
       break;
     case 1:
-      mousePos.x = (event.clientX / WIDTH) * 2 - 1;
-      mousePos.y = -(event.clientY / HEIGHT) * 2 + 1;
+      mousePos.x = (clientX / WIDTH) * 2 - 1;
+      mousePos.y = -(clientY / HEIGHT) * 2 + 1;
       raycaster.setFromCamera( mousePos, camera );
       targetBox.raycast(raycaster, intersects);
       if(intersects.length > 0){
@@ -481,8 +1060,8 @@ function handleMouseDown(event){
       break;
     case 2: 
       if(playingSong){
-        mousePos.x = (event.clientX / WIDTH) * 2 - 1;
-        mousePos.y = -(event.clientY / HEIGHT) * 2 + 1;
+        mousePos.x = (clientX / WIDTH) * 2 - 1;
+        mousePos.y = -(clientY / HEIGHT) * 2 + 1;
         raycaster.setFromCamera( mousePos, camera );
         raycaster.intersectObjects(balloons, true, intersects);
         if(intersects.length > 0){
@@ -491,11 +1070,17 @@ function handleMouseDown(event){
         }
       }
       break;
+    case 3:
+      if(cameraGroup.userData.count > 0){
+        mousePos.x = (clientX / WIDTH) * 2 - 1;
+        mousePos.y = -(clientY / HEIGHT) * 2 + 1;
+        mouseDown = true;
+      }
+      break;
   }
 }
 
-function handleMouseUp(event){
-  event.preventDefault();
+function onMouseUp(){
   if(itemsToLoad != 0){ return; }
   switch(stage){
     case 0:break;
@@ -513,78 +1098,105 @@ function handleMouseUp(event){
         createBalloons();
       } 
       break;
+    case 3:
+      if(mouseDown && !mouseMove){
+        raycaster.setFromCamera( mousePos, camera );
+        const intersects = raycaster.intersectObjects(scene.children, true);
+        if(intersects.length > 0){
+          let box = intersects[0].object;
+          switch(box.userData.type){
+            case 'pouch':
+              if(cameraGroup.userData.person){
+                moveHeart2OriginalPosition(cameraGroup.userData.person);
+                cameraGroup.userData.person = null;
+              }
+              break;
+            case 'person':
+              if(cameraGroup.userData.person){
+                if(cameraGroup.userData.person == box.userData.person){
+                  moveHeart2Person(cameraGroup.userData.person);
+                  cameraGroup.userData.person = null;
+                }
+              }
+              break;
+            case 'heart':
+              if(box.userData.person.userData.heartState != 0){ return; }
+              if(cameraGroup.userData.person){
+                moveHeart2OriginalPosition(cameraGroup.userData.person);
+              }
+              moveHeart2Pouch(box.userData.person);
+              cameraGroup.userData.person = box.userData.person;
+              break;
+          }
+        }
+      }
+      mouseMove = false;
+      mouseDown = false;
+      break;
   }
 }
 
-function handleMouseMove(event) {
-  event.preventDefault();
+function onMouseMove(clientX) {
   if(!mouseDown) { return; }
   switch(stage){
     case 0:break;
     case 1:
-      let tx = -1 + (event.clientX / WIDTH)*2;
-      // let ty = 1 - (event.clientY / HEIGHT)*2;
-
+      let tx = -1 + (clientX / WIDTH)*2;
       let lr = mousePos.x - tx;
-      // let ud = mousePos.y - ty;
-
       camera.position.x += lr * 30;
       let bound = 72;
       if(camera.position.x < -bound){camera.position.x = -bound;}
       else if(camera.position.x > bound){camera.position.x = bound;}
       mousePos.x = tx;
-      // mousePos.y = ty;
       break;
     case 2:break;
+    case 3:
+      let nx = -1 + (clientX / WIDTH)*2;
+      let p = (mousePos.x - nx) * 30 + camera.position.x;
+      let bl = 36, br = 40;
+      if(p < -bl){p = -bl;}
+      else if(p > br){p = br;}
+      camera.position.x = p;
+      mousePos.x = nx;
+      mouseMove = true;
+      break;
   }
+}
+
+function handleMouseDown(event){
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  onMouseDown(event.clientX, event.clientY);
+}
+
+function handleMouseUp(event){
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  onMouseUp();
+}
+
+function handleMouseMove(event) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  onMouseMove(event.clientX);
 }
 
 function handleTouchStart(event) {
-  if (stage!=1) {return;}
   event.preventDefault();
-  if(mouseDown || itemsToLoad != 0){ return; }
-
-  mousePos.x = (event.targetTouches[0].clientX / WIDTH) * 2 - 1;
-  mousePos.y = -(event.targetTouches[0].clientY / HEIGHT) * 2 + 1;
-  raycaster.setFromCamera( mousePos, camera );
-  const intersects = [];
-  targetBox.raycast(raycaster, intersects);
-  if(intersects.length > 0){
-    targetBox.removeFromParent();
-    loadStage_2();
-    return;
-  }
-  people.forEach((person)=>{
-    person.userData.action.timeScale = 0.04 * person.userData.animationSpeed;
-  });
-  slowmo = true;
-  mouseDown = true;
+  event.stopImmediatePropagation();
+  onMouseDown(event.targetTouches[0].clientX, event.targetTouches[0].clientY);
 }
 
 function handleTouchMove(event) {
-  if (stage!=1) {return;}
   event.preventDefault();
-  if(!mouseDown) { return; }
-
-  let tx = -1 + (event.targetTouches[0].clientX / WIDTH)*2;
-  let lr = mousePos.x - tx;
-  camera.position.x += lr * 30;
-  let bound = 72;
-  if(camera.position.x < -bound){camera.position.x = -bound;}
-  else if(camera.position.x > bound){camera.position.x = bound;}
-  mousePos.x = tx;
+  event.stopImmediatePropagation();
+  onMouseMove(event.targetTouches[0].clientX);
 }
 
 function handleTouchEnd(event) {
-  if(stage!=1){return;}
   event.preventDefault();
-  if(itemsToLoad != 0){ return; }
-
-  people.forEach((person)=>{
-    person.userData.action.timeScale = person.userData.animationSpeed;
-  });
-  slowmo = false;
-  mouseDown = false;
+  event.stopImmediatePropagation();
+  onMouseUp();
 }
 
 function getRandomInteger(min, max) {
@@ -614,6 +1226,10 @@ function createBalloons(){
   }
 }
 
+function randFloat(a, b){
+  return Math.random() * (b - a) + a;
+}
+
 function lerp(a, b, x){
   return a + (b - a) * x;
 }
@@ -637,11 +1253,15 @@ function easeInElastic(x) {
     : -Math.pow(2, 10 * x - 10) * Math.sin((x * 10 - 10.75) * c4);
 }
 
+function easeOutCubic(x) {
+  return 1 - Math.pow(1 - x, 3);
+}
+
 function animate(){
   let delta = clock.getDelta();
   runTime += delta;
   if(stage == 0){
-    if(itemsToLoad == 0){ //loadStage_1(); ///////////////////////
+    if(itemsToLoad == 0){ //loadStage_3();//loadStage_1(); ///////////////////////
       health[0].material.opacity= (Math.sin(runTime*5) + 1) * 0.5;
       earth.rotateY(spinSpeed);
       if(step > 0){
@@ -666,10 +1286,14 @@ function animate(){
             let alpha = step/50;
             alpha = easeInElastic(alpha);
             camera.position.z = lerp(3.2, 0.5, alpha);
+            if(step == 50){document.getElementById('log').remove();}
             step++;
           }
           else{
-            loadStage_1();
+            const today = new Date();
+            const month = today.getMonth();
+            if(month == 2){ loadStage_1(); }
+            else{ loadStage_3(); }
           }
         }
       }
@@ -855,6 +1479,221 @@ function animate(){
         }
         else{b.position.y+=b.userData.speed;}
       });
+    }
+  }
+  else if(stage == 3){
+    if(itemsToLoad == 0){
+      const cd = cameraGroup.userData;
+
+      people.forEach((person)=>{
+        const data = person.userData;
+        data.mixer.update(delta);
+        if(data.heart){
+          let heart = data.heart, period, scale, alpha;
+          switch(data.heartState){
+            case 0: // original position
+              heart.position.copy(data.heartPosition);
+              period = runTime*3;
+              heart.position.y += Math.sin(period) * 0.3;
+              scale = Math.sin(period) * 0.1 + 2;
+              heart.scale.set(scale,scale,scale);
+              heart.material.emissiveIntensity = (-Math.sin(period) + 1) * 0.5;
+              break;
+            case 1: // in pouch
+              period = runTime*3;
+              scale = Math.sin(period) * 0.1 + 2;
+              heart.scale.set(scale,scale,scale);
+              break;
+            case 2: // transit to pouch
+              cd.pouchIntersect.getWorldPosition(heart.position);
+              data.heartElapsed += delta;
+              alpha = data.heartElapsed / 0.2;
+              if(alpha < 1){
+                heart.position.lerpVectors(data.heartPosition, heart.position, alpha);
+                heart.position.y -= Math.sin(alpha * Math.PI) * 2;
+              }
+              else{
+                cd.pouchIntersect.add(heart);
+                heart.position.set(0,0,0);
+                data.heartElapsed = 0;
+                data.heartState = 1;
+              }
+              break;
+            case 3: // transit to original position
+              cd.pouchIntersect.getWorldPosition(heart.position);
+              data.heartElapsed += delta;
+              alpha = data.heartElapsed / 0.2;
+              if(alpha < 1){
+                heart.position.lerpVectors(heart.position, data.heartPosition, alpha);
+                heart.position.y += Math.sin(alpha * Math.PI) * 5;
+              }
+              else{
+                heart.position.copy(data.heartPosition);
+                data.heartElapsed = 0;
+                data.heartState = 0;
+              }
+              break;
+            case 4: // transit to person
+              cd.pouchIntersect.getWorldPosition(heart.position);
+              let pos = person.position.clone();
+              pos.y += 0.5;
+              data.heartElapsed += delta;
+              alpha = data.heartElapsed / 2;
+              if(alpha < 1){
+                heart.position.lerpVectors(heart.position, pos, alpha);
+                heart.position.y += Math.sin(alpha * Math.PI) * 14;
+                heart.rotateY(0.2);
+                if(alpha > 0.5){
+                  let beta = (alpha-0.5)*2;
+                  heart.rotateY(lerp(0, 0.4, beta));
+                  scale = lerp(2, 0.5, beta);
+                  heart.scale.set(scale,scale,scale);
+                }
+              }
+              else{
+                scene.remove(heart);
+                data.heart = null;
+                beHappy(person);
+              }
+              break;
+          }
+        }
+        else if(data.numberRising){
+          data.numberElapsed += delta;
+          let elapsed = data.numberElapsed;
+          if(elapsed < 3){
+            let alpha = elapsed / 3;
+            data.number.position.set(
+              data.dancePosition.x + Math.sin(runTime*80) * 0.2,
+              lerp(-2, data.dancePosition.y, alpha),
+              data.dancePosition.z + Math.sin(runTime*80+1) * 0.2);
+            const puffTime = 2.2;
+            elapsed -= 3 - puffTime;
+            if(elapsed > 0){
+              //teleport to stage
+              alpha = elapsed / puffTime;
+              const s = lerp(0.6, 1.2, alpha);
+              data.puff.scale.set(s, s, s);
+              data.puff.material.opacity = (Math.sin(Math.PI * (alpha + alpha - 0.5)) + 1) * 0.4;
+              person.visible = Math.random() + 0.5 < alpha ? false : true;
+            }
+          }
+          else{
+            person.visible = true;
+            scene.remove(data.puff);
+            data.number.position.copy(data.dancePosition);
+            data.numberRising = false;
+            startDance(person);
+          }
+        }
+        else if(data.nextAction){
+          const rot = data.rotationRemain;
+          if(rot != 0){
+            let amount = 0.4;
+            if(rot > 0){
+              if(rot < amount){
+                amount = rot;
+                data.rotationRemain = 0;
+              }
+              else{
+                data.rotationRemain -= amount;
+              }
+            }
+            else{
+              amount = -amount;
+              if(rot > amount){
+                amount = rot;
+                data.rotationRemain = 0;
+              }
+              else{
+                data.rotationRemain -= amount;
+              }
+            }
+            person.rotateY(amount);
+          }
+          else{
+            data.nextAction.play();
+            data.nextAction = null;
+          }
+        }
+      });
+
+      if(cd.count == 0){
+        cd.count--;
+        camera.remove(cameraGroup);
+        camElapsed = 0;
+        camStart = camera.position.clone();
+        camStop = new THREE.Vector3(0, 100, 23);
+        camQStart = camera.quaternion.clone();
+        camera.position.copy(camStop);
+        camera.lookAt(0,0,0);
+        camQStop = camera.quaternion.clone();
+        camera.position.copy(camStart);
+        camera.quaternion.copy(camQStart);
+      }
+      else if(cd.count == -1){
+        camElapsed += delta;
+        if(camElapsed < 10){
+          if(camElapsed > 2){
+            let alpha = (camElapsed - 2) / 8;
+            alpha = easeInOutCubic(alpha);
+            camera.position.lerpVectors(camStart, camStop, alpha);
+            camera.quaternion.slerpQuaternions(camQStart, camQStop, alpha);
+          }
+        }
+        else{
+          showFireworks(delta);
+
+          let t = camElapsed - 10;
+          camera.position.set(
+            camStop.x + Math.sin(t * 0.8) * 2,
+            camStop.y + Math.sin(t * 0.4) * 5,
+            camStop.z + Math.sin(t * 0.2) * 10
+          );
+          if(Math.floor(t * 0.2 / Math.PI) % 2 == 0){
+            camera.quaternion.copy(camQStop);
+          }
+          else{
+            camera.lookAt(0,0,0);
+          }
+        }
+        
+        if(group){
+          if(group.scale.x < 0.01){
+            scene.remove(group);
+            group = null;
+
+            people.forEach((person)=>{
+              let a = person.userData.actions;
+              a.r.timeScale = 3;
+              a.l.timeScale = 3;
+              a.f.timeScale = 3;
+            });
+          }
+          else {
+            if(camElapsed > 8){
+              group.position.x += 0.2;
+              group.position.z -= 0.4;
+              group.scale.subScalar(0.002);
+              group.rotateX(-0.08);
+              group.rotation.z = Math.sin((camElapsed - 5) * 4) * 0.6;
+            }
+            else if(camElapsed > 6.2){
+              group.position.y -= 3;
+              group.position.z -= 0.5;
+              group.rotateX(-0.04);
+              group.rotation.z = Math.sin((camElapsed - 5) * 4) * 0.4;
+            }
+            else if(camElapsed > 5){
+              group.position.y -= 0.6;
+              group.position.z -= 0.5;
+              group.scale.subScalar(0.01);
+              group.rotateX(-0.01);
+              group.rotation.z = Math.sin((camElapsed - 5) * 4) * 0.2;
+            }
+          }
+        }
+      }
     }
   }
   else { return; }
